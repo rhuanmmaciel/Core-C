@@ -7,8 +7,6 @@
 #include <allegro5/allegro_image.h>
 #include <allegro5/allegro_primitives.h>
 
-//teste
-
 //gcc t.c $(pkg-config allegro-5 allegro_font-5 allegro_ttf-5 allegro_image-5 allegro_primitives-5 --libs --cflags)
 
 const int height = 600;
