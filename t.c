@@ -2,13 +2,14 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <math.h>
+#include <time.h>
 #include <allegro5/allegro5.h>
 #include <allegro5/allegro_font.h>
 #include <allegro5/allegro_ttf.h>
 #include <allegro5/allegro_image.h>
 #include <allegro5/allegro_primitives.h>
 
-//gcc t.c $(pkg-config allegro-5 allegro_font-5 allegro_ttf-5 allegro_image-5 allegro_primitives-5 --libs --cflags)
+//gcc t.c $(pkg-config allegro-5 allegro_font-5 allegro_ttf-5 allegro_image-5 allegro_primitives-5 --libs --cflags) -lm
 
 const int height = 720;
 const int width = 1280;
@@ -123,13 +124,81 @@ struct enemy{
   int pos_x;
   int pos_y;
   ALLEGRO_COLOR color;
+  bool alive;
 
 };
 
-void generate_enemy(struct enemy enemies[], int* index_enemies){
+int random_position(int limit){
 
-  al_draw_filled_circle()
+  return rand() % limit;  
 
+}
+
+void enemy_generation(struct enemy enemies[], int* index_enemies, int* max_enemies){
+
+  int side = rand() % 4;
+
+  if(*index_enemies < *max_enemies && enemies[*index_enemies].alive == false){
+
+    switch(side){
+
+      case 0:
+        enemies[*index_enemies].pos_x = 0;
+        enemies[*index_enemies].pos_y = random_position(height);
+        break;
+      case 1: 
+        enemies[*index_enemies].pos_x = width;
+        enemies[*index_enemies].pos_y = random_position(height); 
+        break;
+      case 2:
+        enemies[*index_enemies].pos_x = random_position(width);
+        enemies[*index_enemies].pos_y = 0;
+        break;
+      case 3: 
+        enemies[*index_enemies].pos_x = random_position(width);
+        enemies[*index_enemies].pos_y = height; 
+        break;        
+
+    }
+
+    enemies[*index_enemies].radius = 10;
+    enemies[*index_enemies].color = al_map_rgb(0, 0, 0);
+    enemies[*index_enemies].alive = true;
+    *index_enemies += *index_enemies < 29 ? 1 : - 29;
+
+  }
+
+}
+
+void movement_update(struct enemy enemies[], int i){
+
+  enemies[i].pos_x += enemies[i].pos_x < width / 2 ? 1 : -1;
+  enemies[i].pos_y += enemies[i].pos_y < height / 2 ? 1 : -1;
+
+}
+
+void colision_check(struct enemy enemies[], int x, int y, int i){
+
+  if(enemies[i].pos_x > width / 2 && enemies[i].pos_y > height / 2)
+    enemies[i].alive = false;
+
+}
+
+void enemy_logic(ALLEGRO_TIMER* timer, struct enemy enemies[], int* index_enemies,
+                 int* max_enemies, float* mouse_pos_x, float* mouse_pos_y){
+
+  if(al_get_timer_count(timer) % 100 == 0)enemy_generation(enemies, index_enemies, max_enemies);
+
+  for(int i = 0; i < *max_enemies; i++){
+ 
+    movement_update(enemies, i); 
+    colision_check(enemies, *mouse_pos_x, *mouse_pos_y, i);
+
+    if(enemies[i].alive == true)
+      al_draw_filled_circle(enemies[i].pos_x, enemies[i].pos_y,
+                            enemies[i].radius, enemies[i].color);
+  }
+  
 }
 
 void game_background(float* radius, float* shield, float* mouse_pos_x, float* mouse_pos_y){
@@ -149,8 +218,9 @@ void game_background(float* radius, float* shield, float* mouse_pos_x, float* mo
 }
 
 void play_game(ALLEGRO_EVENT event, ALLEGRO_EVENT_QUEUE* queue, ALLEGRO_KEYBOARD_STATE keyboard,
-               ALLEGRO_FONT* font, bool* game, bool* redraw, int* screen, float* radius, float* shield,
-               float* mouse_pos_x, float* mouse_pos_y){
+               ALLEGRO_FONT* font, ALLEGRO_TIMER* timer, bool* game, bool* redraw, int* screen,
+               float* radius, float* shield, float* mouse_pos_x, float* mouse_pos_y, 
+               struct enemy enemies[], int* index_enemies, int* max_enemies){
 
   switch (event.type){
 
@@ -161,8 +231,7 @@ void play_game(ALLEGRO_EVENT event, ALLEGRO_EVENT_QUEUE* queue, ALLEGRO_KEYBOARD
     case ALLEGRO_EVENT_KEY_DOWN:
       /*al_get_keyboard_state(&keyboard);
       if(al_key_down(&keyboard, ALLEGRO_KEY_ESCAPE))
-        game = false;
-        */
+        enemy_logic(timer, enemies, index_enemies);*/    
       break;
 
     case ALLEGRO_EVENT_DISPLAY_CLOSE:
@@ -171,7 +240,7 @@ void play_game(ALLEGRO_EVENT event, ALLEGRO_EVENT_QUEUE* queue, ALLEGRO_KEYBOARD
 
     case ALLEGRO_EVENT_MOUSE_AXES:
       *mouse_pos_x = event.mouse.x - width / 2;
-      *mouse_pos_y = event.mouse.y - height / 2;     
+      *mouse_pos_y = event.mouse.y - height / 2; 
       break;
   }
 
@@ -179,6 +248,7 @@ void play_game(ALLEGRO_EVENT event, ALLEGRO_EVENT_QUEUE* queue, ALLEGRO_KEYBOARD
 
     al_clear_to_color(al_map_rgb(0, 0, 100));
     game_background(radius, shield, mouse_pos_x, mouse_pos_y);
+    enemy_logic(timer, enemies, index_enemies, max_enemies, mouse_pos_x, mouse_pos_y);
     al_flip_display();
 
     *redraw = false;
@@ -209,14 +279,21 @@ int main(){
   float shield = 0;
   float mouse_pos_x = 0;
   float mouse_pos_y = - height / 2;
-  struct enemy enemies[30];
+
+  int max_enemies = 30;
   int index_enemies = 0;
+  struct enemy enemies[max_enemies];
+  for(int i = 0; i < max_enemies; i++)
+    enemies[i].alive = false;
+
   ALLEGRO_EVENT event;
   ALLEGRO_KEYBOARD_STATE keyboard;
 
+  time_t t;
+  srand(time(&t));
+
   float menu_rect_x_pos1 = width * 0.35;
   float menu_rect_x_pos2 = 0.3 * width + menu_rect_x_pos1;
-
   float menu_rect_y_size = font_size + height * 0.10;
   float menu_rect_y_pos1 = height * 0.15;
   float menu_rect_y_pos2 = height * 0.35;
@@ -240,10 +317,9 @@ int main(){
 
       case 1: 
         
-        play_game(event, queue, keyboard, font, &game, &redraw, &screen, &radius, &shield,
-                  &mouse_pos_x, &mouse_pos_y);
-        if(al_get_timer_count(timer) % 1000 == 0)
-          generate_enemy(enemies, &index_enemies);
+        play_game(event, queue, keyboard, font, timer, &game, &redraw,
+                  &screen, &radius, &shield, &mouse_pos_x, &mouse_pos_y,
+                  enemies, &index_enemies, &max_enemies);
         break;
 
       case 2:
@@ -261,8 +337,7 @@ int main(){
         game = false;
         break;        
 
-      }
-      index_enemies += index_enemies == 29 ? - 29 : 1;   
+      } 
   }
 
   al_destroy_font(font);
