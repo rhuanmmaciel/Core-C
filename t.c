@@ -11,8 +11,8 @@
 
 //gcc t.c $(pkg-config allegro-5 allegro_font-5 allegro_ttf-5 allegro_image-5 allegro_primitives-5 --libs --cflags) -lm
 
-const int height = 720;
 const int width = 1280;
+const int height = 720;
 const float font_size = (225.0 / 8.0) * ((float) width / height);
 
 void must_init(bool test, const char* description){
@@ -44,41 +44,58 @@ void event_register(ALLEGRO_EVENT_QUEUE* queue,  ALLEGRO_DISPLAY* display, ALLEG
 
 }
 
-void updateConstant(float* k, float* r){
-  *k += 4.0;
-  *r += 4.0;
+void update_color(ALLEGRO_COLOR button_colors[], int i, bool selected){
+
+  button_colors[i] = selected ? al_map_rgb(100, 100, 100) : al_map_rgb(215, 188, 134);
+   
+}
+
+void updateConstant(float* k, float* r, float i){
+  *k += i;
+  *r += i;
 }
 
 void draw_menu(ALLEGRO_FONT* font, float rect_x_pos1, float rect_x_pos2, float rect_y_size,
-               float rect_y_pos1, float rect_y_pos2, float rect_y_pos3, float rect_y_pos4){
+               float rect_y_pos1, float rect_y_pos2, float rect_y_pos3, float rect_y_pos4,
+               ALLEGRO_COLOR button_colors[]){
 
   float k = 4.0;
   float r = 3.0;
 
   al_draw_filled_rectangle(0, 0, width, height, al_map_rgb(215, 188, 134));
-  al_draw_rectangle(width * 0.01, height * 0.01, width * 0.99, height * 0.99, al_map_rgb(0, 0, 0), 5);
+  al_draw_rectangle(width * 0.01, height * 0.01, width * 0.99, height * 0.99, al_map_rgb(0,0,0), 5);
 
+  al_draw_filled_rectangle(rect_x_pos1, rect_y_pos1, rect_x_pos2, rect_y_pos1 + rect_y_size, button_colors[0]);
   al_draw_text(font, al_map_rgb(0, 0, 0), 0.5 * width, rect_y_pos1 * k / r, ALLEGRO_ALIGN_CENTRE, "NEW GAME");
-  al_draw_rectangle(rect_x_pos1, rect_y_pos1, rect_x_pos2, rect_y_pos1 + rect_y_size, al_map_rgb(0, 0, 0), 2);
-  updateConstant(&k, &r);
+  al_draw_rectangle(rect_x_pos1, rect_y_pos1, rect_x_pos2, rect_y_pos1 + rect_y_size, al_map_rgb(0,0,0), 2);
+  updateConstant(&k, &r, 4.0);
 
+  al_draw_filled_rectangle(rect_x_pos1, rect_y_pos2, rect_x_pos2, rect_y_pos2 + rect_y_size, button_colors[1]);
   al_draw_text(font, al_map_rgb(0, 0, 0), 0.5 * width, rect_y_pos2 * k / r, ALLEGRO_ALIGN_CENTRE, "SETTINGS");
-  al_draw_rectangle(rect_x_pos1, rect_y_pos2, rect_x_pos2, rect_y_pos2 + rect_y_size, al_map_rgb(0, 0, 0), 2); 
-  updateConstant(&k, &r);
+  al_draw_rectangle(rect_x_pos1, rect_y_pos2, rect_x_pos2, rect_y_pos2 + rect_y_size, al_map_rgb(0,0,0), 2); 
+  updateConstant(&k, &r, 4.0);
 
+  al_draw_filled_rectangle(rect_x_pos1, rect_y_pos3, rect_x_pos2, rect_y_pos3 + rect_y_size, button_colors[2]);
   al_draw_text(font, al_map_rgb(0, 0, 0), 0.5 * width, rect_y_pos3 * k / r, ALLEGRO_ALIGN_CENTRE, "HELP");
-  al_draw_rectangle(rect_x_pos1, rect_y_pos3, rect_x_pos2, rect_y_pos3 + rect_y_size, al_map_rgb(0, 0, 0), 2);  
-  updateConstant(&k, &r);
+  al_draw_rectangle(rect_x_pos1, rect_y_pos3, rect_x_pos2, rect_y_pos3 + rect_y_size, al_map_rgb(0,0,0), 2);  
+  updateConstant(&k, &r, 4.0);
 
+  al_draw_filled_rectangle(rect_x_pos1, rect_y_pos4, rect_x_pos2, rect_y_pos4 + rect_y_size, button_colors[3]);
   al_draw_text(font, al_map_rgb(0, 0, 0), 0.5 * width, rect_y_pos4 * k / r, ALLEGRO_ALIGN_CENTRE, "QUIT");
-  al_draw_rectangle(rect_x_pos1, rect_y_pos4, rect_x_pos2, rect_y_pos4 + rect_y_size, al_map_rgb(0, 0, 0), 2);  
+  al_draw_rectangle(rect_x_pos1, rect_y_pos4, rect_x_pos2, rect_y_pos4 + rect_y_size, al_map_rgb(0,0,0), 2);  
 
 }
 
 void menu(ALLEGRO_EVENT event, ALLEGRO_EVENT_QUEUE* queue, ALLEGRO_FONT* font,
-          bool* game, bool* redraw, int* screen, float rect_x_pos1, float rect_x_pos2,
-          float rect_y_size, float rect_y_pos1, float rect_y_pos2,
-          float rect_y_pos3, float rect_y_pos4){
+          bool* game, bool* redraw, int* screen, ALLEGRO_COLOR button_colors[]){
+
+  float rect_x_pos1 = width * 0.35;
+  float rect_x_pos2 = 0.3 * width + rect_x_pos1;
+  float rect_y_size = font_size + height * 0.10;
+  float rect_y_pos1 = height * 0.15;
+  float rect_y_pos2 = height * 0.35;
+  float rect_y_pos3 = height * 0.55;
+  float rect_y_pos4 = height * 0.75;
 
   switch (event.type){
 
@@ -103,14 +120,35 @@ void menu(ALLEGRO_EVENT event, ALLEGRO_EVENT_QUEUE* queue, ALLEGRO_FONT* font,
           *screen = 5;                
 
       }      
-      break;  
+      break;
+
+    case ALLEGRO_EVENT_MOUSE_AXES:
+
+      if(event.mouse.x >= rect_x_pos1 && event.mouse.x <= rect_x_pos2 &&
+         event.mouse.y >= rect_y_pos1 && event.mouse.y <= rect_y_pos1 + rect_y_size)
+        update_color(button_colors, 0, true);
+      else update_color(button_colors, 0, false);
+      if(event.mouse.x >= rect_x_pos1 && event.mouse.x <= rect_x_pos2 &&
+         event.mouse.y >= rect_y_pos2 && event.mouse.y <= rect_y_pos2 + rect_y_size)
+        update_color(button_colors, 1, true);
+      else update_color(button_colors, 1, false);    
+      if(event.mouse.x >= rect_x_pos1 && event.mouse.x <= rect_x_pos2 &&
+         event.mouse.y >= rect_y_pos3 && event.mouse.y <= rect_y_pos3 + rect_y_size)
+        update_color(button_colors, 2, true);
+      else update_color(button_colors, 2, false);      
+      if(event.mouse.x >= rect_x_pos1 && event.mouse.x <= rect_x_pos2 &&
+         event.mouse.y >= rect_y_pos4 && event.mouse.y <= rect_y_pos4 + rect_y_size)
+        update_color(button_colors, 3, true);                                                   
+      else update_color(button_colors, 3, false);        
+      break; 
+        
    }
 
   if(*redraw && al_is_event_queue_empty(queue) && *screen == 0){
 
     al_clear_to_color(al_map_rgb(0, 0, 100));
     draw_menu(font, rect_x_pos1, rect_x_pos2, rect_y_size, rect_y_pos1,
-              rect_y_pos2, rect_y_pos3, rect_y_pos4);
+              rect_y_pos2, rect_y_pos3, rect_y_pos4, button_colors);
     al_flip_display();
 
     *redraw = false;
@@ -119,31 +157,40 @@ void menu(ALLEGRO_EVENT event, ALLEGRO_EVENT_QUEUE* queue, ALLEGRO_FONT* font,
 }
 
 void draw_difficulty(ALLEGRO_FONT* font, float rect_x_pos1, float rect_x_pos2, float rect_y_size,
-                     float rect_y_pos1, float rect_y_pos2, float rect_y_pos3){
+                     float rect_y_pos1, float rect_y_pos2, float rect_y_pos3, ALLEGRO_COLOR button_colors[]){
 
-  float k = 4.0;
-  float r = 3.0;
+  float k = 9.0;
+  float r = 7.0;
 
   al_draw_filled_rectangle(0, 0, width, height, al_map_rgb(215, 188, 134));
   al_draw_rectangle(width * 0.01, height * 0.01, width * 0.99, height * 0.99, al_map_rgb(0, 0, 0), 5);
 
+  al_draw_filled_rectangle(rect_x_pos1, rect_y_pos1, rect_x_pos2, rect_y_pos1 + rect_y_size, button_colors[4]);
   al_draw_text(font, al_map_rgb(0, 0, 0), 0.5 * width, rect_y_pos1 * k / r, ALLEGRO_ALIGN_CENTRE, "EASY");
   al_draw_rectangle(rect_x_pos1, rect_y_pos1, rect_x_pos2, rect_y_pos1 + rect_y_size, al_map_rgb(0, 0, 0), 2);
-  updateConstant(&k, &r);
+  updateConstant(&k, &r, 9.0);
 
+  al_draw_filled_rectangle(rect_x_pos1, rect_y_pos2, rect_x_pos2, rect_y_pos2 + rect_y_size, button_colors[5]);
   al_draw_text(font, al_map_rgb(0, 0, 0), 0.5 * width, rect_y_pos2 * k / r, ALLEGRO_ALIGN_CENTRE, "MEDIUM");
   al_draw_rectangle(rect_x_pos1, rect_y_pos2, rect_x_pos2, rect_y_pos2 + rect_y_size, al_map_rgb(0, 0, 0), 2); 
-  updateConstant(&k, &r);
+  updateConstant(&k, &r, 9.0);
 
+  al_draw_filled_rectangle(rect_x_pos1, rect_y_pos3, rect_x_pos2, rect_y_pos3 + rect_y_size, button_colors[6]);
   al_draw_text(font, al_map_rgb(0, 0, 0), 0.5 * width, rect_y_pos3 * k / r, ALLEGRO_ALIGN_CENTRE, "HARD");
   al_draw_rectangle(rect_x_pos1, rect_y_pos3, rect_x_pos2, rect_y_pos3 + rect_y_size, al_map_rgb(0, 0, 0), 2);  
 
 }
 
 void set_difficulty(ALLEGRO_EVENT event, ALLEGRO_EVENT_QUEUE* queue, ALLEGRO_KEYBOARD_STATE keyboard,
-                    ALLEGRO_FONT* font,  bool* game, bool* redraw, int* screen, int* difficulty, 
-                    float rect_x_pos1, float rect_x_pos2, float rect_y_size, float rect_y_pos1,
-                    float rect_y_pos2, float rect_y_pos3){
+                    ALLEGRO_FONT* font,  bool* game, bool* redraw, int* screen, int* difficulty,
+                    ALLEGRO_COLOR button_colors[]){
+
+  float rect_x_pos1 = width * 0.40;
+  float rect_x_pos2 = width * 0.60;
+  float rect_y_size = font_size + height * 0.10;
+  float rect_y_pos1 = height * 0.175;
+  float rect_y_pos2 = height * 0.375;
+  float rect_y_pos3 = height * 0.575;  
 
   switch (event.type){
 
@@ -166,7 +213,23 @@ void set_difficulty(ALLEGRO_EVENT event, ALLEGRO_EVENT_QUEUE* queue, ALLEGRO_KEY
           *difficulty = 3;               
 
       }      
-      break;  
+      break;
+
+    case ALLEGRO_EVENT_MOUSE_AXES:
+
+      if(event.mouse.x >= rect_x_pos1 && event.mouse.x <= rect_x_pos2 &&
+         event.mouse.y >= rect_y_pos1 && event.mouse.y <= rect_y_pos1 + rect_y_size)
+        update_color(button_colors, 4, true);
+      else update_color(button_colors, 4, false);
+      if(event.mouse.x >= rect_x_pos1 && event.mouse.x <= rect_x_pos2 &&
+         event.mouse.y >= rect_y_pos2 && event.mouse.y <= rect_y_pos2 + rect_y_size)
+        update_color(button_colors, 5, true);
+      else update_color(button_colors, 5, false);    
+      if(event.mouse.x >= rect_x_pos1 && event.mouse.x <= rect_x_pos2 &&
+         event.mouse.y >= rect_y_pos3 && event.mouse.y <= rect_y_pos3 + rect_y_size)
+        update_color(button_colors, 6, true);
+      else update_color(button_colors, 6, false);             
+      break;     
    }
 
   *screen = *difficulty == 0 ? *screen : 2; 
@@ -176,7 +239,7 @@ void set_difficulty(ALLEGRO_EVENT event, ALLEGRO_EVENT_QUEUE* queue, ALLEGRO_KEY
     al_clear_to_color(al_map_rgb(0, 0, 100));
     draw_difficulty(font, rect_x_pos1, rect_x_pos2,
                     rect_y_size, rect_y_pos1,
-                    rect_y_pos2, rect_y_pos3);
+                    rect_y_pos2, rect_y_pos3, button_colors);
     al_flip_display();
 
     *redraw = false;
@@ -338,6 +401,7 @@ int main(){
   float shield = 0;
   float mouse_pos_x = 0;
   float mouse_pos_y = - height / 2;
+  ALLEGRO_COLOR button_colors[10];
 
   int max_enemies = 30;
   int index_enemies = 0;
@@ -348,21 +412,7 @@ int main(){
   time_t t;
   srand(time(&t));
 
-  float menu_rect_x_pos1 = width * 0.35;
-  float menu_rect_x_pos2 = 0.3 * width + menu_rect_x_pos1;
-  float menu_rect_y_size = font_size + height * 0.10;
-  float menu_rect_y_pos1 = height * 0.15;
-  float menu_rect_y_pos2 = height * 0.35;
-  float menu_rect_y_pos3 = height * 0.55;
-  float menu_rect_y_pos4 = height * 0.75;
-
   int difficulty = 0;
-  float difficulty_rect_x_pos1 = width * 0.40;
-  float difficulty_rect_x_pos2 = width * 0.60;
-  float difficulty_rect_y_size = font_size + height * 0.10;
-  float difficulty_rect_y_pos1 = height * 0.175;
-  float difficulty_rect_y_pos2 = height * 0.375;
-  float difficulty_rect_y_pos3 = height * 0.575;
 
   al_start_timer(timer);
 
@@ -373,17 +423,13 @@ int main(){
 
       case 0:
 
-        menu(event, queue, font, &game, &redraw, &screen,
-            menu_rect_x_pos1, menu_rect_x_pos2, menu_rect_y_size,
-            menu_rect_y_pos1, menu_rect_y_pos2, menu_rect_y_pos3,
-            menu_rect_y_pos4);
+        menu(event, queue, font, &game, &redraw, &screen, button_colors);
         break;
 
       case 1:
         
-        set_difficulty(event, queue, keyboard, font, &game, &redraw, &screen, &difficulty,
-                       difficulty_rect_x_pos1, difficulty_rect_x_pos2, difficulty_rect_y_size,
-                       difficulty_rect_y_pos1, difficulty_rect_y_pos2, difficulty_rect_y_pos3);
+        set_difficulty(event, queue, keyboard, font, &game, &redraw, &screen,
+                       &difficulty, button_colors);
         break;  
 
       case 2: 
