@@ -250,8 +250,10 @@ void set_difficulty(ALLEGRO_EVENT event, ALLEGRO_EVENT_QUEUE* queue, ALLEGRO_KEY
 struct enemy{
 
   int radius;
-  int pos_x;
-  int pos_y;
+  float pos_x;
+  float pos_y;
+  float vel_pos_x;
+  float vel_pos_y;
   ALLEGRO_COLOR color;
   bool alive;
 
@@ -260,6 +262,7 @@ struct enemy{
 void enemy_generation(struct enemy enemies[], int* index_enemies, int* max_enemies){
 
   int side = rand() % 4;
+  bool axes[2];
 
   if(*index_enemies < *max_enemies && enemies[*index_enemies].alive == false){
 
@@ -268,22 +271,39 @@ void enemy_generation(struct enemy enemies[], int* index_enemies, int* max_enemi
       case 0:
         enemies[*index_enemies].pos_x = 0;
         enemies[*index_enemies].pos_y = rand() % height;
+        axes[0] = true;
+        axes[1] = enemies[*index_enemies].pos_y >= height / 2 ? false : true;
         break;
       case 1: 
         enemies[*index_enemies].pos_x = width;
         enemies[*index_enemies].pos_y =rand() % height; 
+        axes[1] = enemies[*index_enemies].pos_y >= height / 2 ? false : true;
+        axes[0] = false;
         break;
       case 2:
         enemies[*index_enemies].pos_x = rand() % width;
         enemies[*index_enemies].pos_y = 0;
+        axes[1] = true;
+        axes[0] = enemies[*index_enemies].pos_x >= width / 2 ? false : true;
         break;
       case 3: 
         enemies[*index_enemies].pos_x = rand() % width;
-        enemies[*index_enemies].pos_y = height; 
+        enemies[*index_enemies].pos_y = height;
+        axes[1] = false; 
+        axes[0] = enemies[*index_enemies].pos_x >= width / 2 ? false : true;
         break;        
 
     }
 
+    float x_velocity = axes[0] ? abs(enemies[*index_enemies].pos_x - width / 2) / 70 :
+                                 -abs(enemies[*index_enemies].pos_x - width / 2) / 70;
+
+    float y_velocity = axes[1] ? abs(enemies[*index_enemies].pos_y - height / 2) / 70 :
+                                 -abs(enemies[*index_enemies].pos_y - height / 2) / 70;
+
+
+    enemies[*index_enemies].vel_pos_x = x_velocity;
+    enemies[*index_enemies].vel_pos_y = y_velocity;
     enemies[*index_enemies].radius = rand() % 10 + 10;
     enemies[*index_enemies].color = al_map_rgb(0, 0, 0);
     enemies[*index_enemies].alive = true;
@@ -295,16 +315,19 @@ void enemy_generation(struct enemy enemies[], int* index_enemies, int* max_enemi
 
 void movement_update(struct enemy enemies[], int i){
 
-  enemies[i].pos_x += enemies[i].pos_x < width / 2 ? 1 : -1;
-  enemies[i].pos_y += enemies[i].pos_y < height / 2 ? 1 : -1;
+  enemies[i].pos_x += enemies[i].vel_pos_x;
+  enemies[i].pos_y += enemies[i].vel_pos_y;
 
 }
 
 void colision_check(struct enemy enemies[], int x, int y, int i, float* shield, float* player_radius){
 
   bool player_hitted = pow(width / 2 - enemies[i].pos_x, 2) + pow(height / 2 - enemies[i].pos_y, 2)
-                  <= pow(*player_radius + enemies[i].radius, 2);
-  if(player_hitted) enemies[i].alive = false;
+                       <= pow(*player_radius + enemies[i].radius, 2);
+  bool edge_hitted = enemies[i].pos_x > width || enemies[i].pos_x < 0 ||
+                     enemies[i].pos_y > height || enemies[i].pos_y < 0;
+
+  if(player_hitted || edge_hitted) enemies[i].alive = false;
 
 }
 
