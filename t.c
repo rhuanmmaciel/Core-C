@@ -284,7 +284,7 @@ void enemy_generation(struct enemy enemies[], int* index_enemies, int* max_enemi
 
     }
 
-    enemies[*index_enemies].radius = 10;
+    enemies[*index_enemies].radius = rand() % 10 + 10;
     enemies[*index_enemies].color = al_map_rgb(0, 0, 0);
     enemies[*index_enemies].alive = true;
     *index_enemies += *index_enemies < 29 ? 1 : - 29;
@@ -300,22 +300,24 @@ void movement_update(struct enemy enemies[], int i){
 
 }
 
-void colision_check(struct enemy enemies[], int x, int y, int i){
+void colision_check(struct enemy enemies[], int x, int y, int i, float* shield, float* player_radius){
 
-  if(enemies[i].pos_x > width / 2 && enemies[i].pos_y > height / 2)
-    enemies[i].alive = false;
+  bool player_hitted = pow(width / 2 - enemies[i].pos_x, 2) + pow(height / 2 - enemies[i].pos_y, 2)
+                  <= pow(*player_radius + enemies[i].radius, 2);
+  if(player_hitted) enemies[i].alive = false;
 
 }
 
 void enemy_logic(ALLEGRO_TIMER* timer, struct enemy enemies[], int* index_enemies,
-                 int* max_enemies, float* mouse_pos_x, float* mouse_pos_y){
+                 int* max_enemies, float* mouse_pos_x, float* mouse_pos_y, float* shield,
+                 float* player_radius){
 
   if(al_get_timer_count(timer) % 100 == 0)enemy_generation(enemies, index_enemies, max_enemies);
 
   for(int i = 0; i < *max_enemies; i++){
  
     movement_update(enemies, i); 
-    colision_check(enemies, *mouse_pos_x, *mouse_pos_y, i);
+    colision_check(enemies, *mouse_pos_x, *mouse_pos_y, i, shield, player_radius);
 
     if(enemies[i].alive == true)
       al_draw_filled_circle(enemies[i].pos_x, enemies[i].pos_y,
@@ -324,7 +326,7 @@ void enemy_logic(ALLEGRO_TIMER* timer, struct enemy enemies[], int* index_enemie
   
 }
 
-void game_background(float* radius, float* shield, float* mouse_pos_x, float* mouse_pos_y){
+void game_background(float* player_radius, float* shield, float* mouse_pos_x, float* mouse_pos_y){
 
   *shield = atan(*mouse_pos_y / *mouse_pos_x);
   *shield += *mouse_pos_x >= 0 ? M_PI : 0;
@@ -333,7 +335,7 @@ void game_background(float* radius, float* shield, float* mouse_pos_x, float* mo
   ALLEGRO_BITMAP* background = al_load_bitmap("background.jpg");
   must_init(background, "background");
   al_draw_bitmap(background, 0, 0, 0);
-  al_draw_filled_circle(width / 2, height / 2, *radius, al_map_rgb(4, 98, 97));
+  al_draw_filled_circle(width / 2, height / 2, *player_radius, al_map_rgb(4, 98, 97));
   al_draw_arc(width / 2, height / 2, width / height * 60, *shield + M_PI / 2, M_PI, 
               al_map_rgb(4, 98, 97), 3);
   al_destroy_bitmap(background);
@@ -342,7 +344,7 @@ void game_background(float* radius, float* shield, float* mouse_pos_x, float* mo
 
 void play_game(ALLEGRO_EVENT event, ALLEGRO_EVENT_QUEUE* queue, ALLEGRO_KEYBOARD_STATE keyboard,
                ALLEGRO_FONT* font, ALLEGRO_TIMER* timer, bool* game, bool* redraw, int* screen,
-               float* radius, float* shield, float* mouse_pos_x, float* mouse_pos_y, 
+               float* player_radius, float* shield, float* mouse_pos_x, float* mouse_pos_y, 
                struct enemy enemies[], int* index_enemies, int* max_enemies){
 
   switch (event.type){
@@ -370,8 +372,9 @@ void play_game(ALLEGRO_EVENT event, ALLEGRO_EVENT_QUEUE* queue, ALLEGRO_KEYBOARD
   if(*redraw && al_is_event_queue_empty(queue) && *screen == 2){
 
     al_clear_to_color(al_map_rgb(0, 0, 100));
-    game_background(radius, shield, mouse_pos_x, mouse_pos_y);
-    enemy_logic(timer, enemies, index_enemies, max_enemies, mouse_pos_x, mouse_pos_y);
+    game_background(player_radius, shield, mouse_pos_x, mouse_pos_y);
+    enemy_logic(timer, enemies, index_enemies, max_enemies,
+                mouse_pos_x, mouse_pos_y, shield, player_radius);
     al_flip_display();
 
     *redraw = false;
@@ -397,7 +400,7 @@ int main(){
 
   bool game = true, redraw = true;
   int screen = 0;
-  float radius = width / height * 20;
+  float player_radius = width / height * 20;
   float shield = 0;
   float mouse_pos_x = 0;
   float mouse_pos_y = - height / 2;
@@ -435,7 +438,7 @@ int main(){
       case 2: 
         
         play_game(event, queue, keyboard, font, timer, &game, &redraw,
-                  &screen, &radius, &shield, &mouse_pos_x, &mouse_pos_y,
+                  &screen, &player_radius, &shield, &mouse_pos_x, &mouse_pos_y,
                   enemies, &index_enemies, &max_enemies);
         break;
 
