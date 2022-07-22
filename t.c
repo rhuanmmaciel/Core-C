@@ -295,10 +295,10 @@ void enemy_generation(struct enemy enemies[], int* index_enemies, int* max_enemi
 
     }
 
-    float x_velocity = axes[0] ? abs(enemies[*index_enemies].pos_x - width / 2) / 70 :
+    float x_velocity = axes[0] ? abs(enemies[*index_enemies].pos_x - width / 2) / 70:
                                  -abs(enemies[*index_enemies].pos_x - width / 2) / 70;
 
-    float y_velocity = axes[1] ? abs(enemies[*index_enemies].pos_y - height / 2) / 70 :
+    float y_velocity = axes[1] ? abs(enemies[*index_enemies].pos_y - height / 2) / 70:
                                  -abs(enemies[*index_enemies].pos_y - height / 2) / 70;
 
 
@@ -307,7 +307,7 @@ void enemy_generation(struct enemy enemies[], int* index_enemies, int* max_enemi
     enemies[*index_enemies].radius = rand() % 10 + 10;
     enemies[*index_enemies].color = al_map_rgb(0, 0, 0);
     enemies[*index_enemies].alive = true;
-    *index_enemies += *index_enemies < 29 ? 1 : - 29;
+    *index_enemies += *index_enemies < *max_enemies - 1 ? 1 : - *max_enemies - 1;
 
   }
 
@@ -322,12 +322,19 @@ void movement_update(struct enemy enemies[], int i){
 
 void colision_check(struct enemy enemies[], int x, int y, int i, float* shield, float* player_radius){
 
+  float enemy_angle = M_PI / 2 + atan((enemies[i].pos_y - height / 2) / (enemies[i].pos_x - width / 2));
+  enemy_angle += enemies[i].pos_x - width / 2 >= 0 ? M_PI : 0;
+
   bool player_hitted = pow(width / 2 - enemies[i].pos_x, 2) + pow(height / 2 - enemies[i].pos_y, 2)
                        <= pow(*player_radius + enemies[i].radius, 2);
   bool edge_hitted = enemies[i].pos_x > width || enemies[i].pos_x < 0 ||
                      enemies[i].pos_y > height || enemies[i].pos_y < 0;
+  bool shield_hitted = pow(width / 2 - enemies[i].pos_x, 2) + pow(height / 2 - enemies[i].pos_y, 2)
+                       <= pow(width / height * 60 + enemies[i].radius, 2)
+                       && enemy_angle >= *shield - M_PI / 2 && enemy_angle <= *shield + M_PI / 2;                   
 
-  if(player_hitted || edge_hitted) enemies[i].alive = false;
+  if((player_hitted || edge_hitted || shield_hitted) && enemies[i].alive)
+    enemies[i].alive = false;
 
 }
 
@@ -349,9 +356,9 @@ void enemy_logic(ALLEGRO_TIMER* timer, struct enemy enemies[], int* index_enemie
   
 }
 
-void game_background(float* player_radius, float* shield, float* mouse_pos_x, float* mouse_pos_y){
+void game_background(float* player_radius, float* shield, float* mouse_pos_x, float* mouse_pos_y, ALLEGRO_FONT* font){
 
-  *shield = atan(*mouse_pos_y / *mouse_pos_x);
+  *shield = M_PI / 2 + atan(*mouse_pos_y / *mouse_pos_x);
   *shield += *mouse_pos_x >= 0 ? M_PI : 0;
 
   must_init(al_init_image_addon(), "image addon");
@@ -359,7 +366,7 @@ void game_background(float* player_radius, float* shield, float* mouse_pos_x, fl
   must_init(background, "background");
   al_draw_bitmap(background, 0, 0, 0);
   al_draw_filled_circle(width / 2, height / 2, *player_radius, al_map_rgb(4, 98, 97));
-  al_draw_arc(width / 2, height / 2, width / height * 60, *shield + M_PI / 2, M_PI, 
+  al_draw_arc(width / 2, height / 2, width / height * 60, *shield, M_PI, 
               al_map_rgb(4, 98, 97), 3);
   al_destroy_bitmap(background);
 
@@ -395,7 +402,7 @@ void play_game(ALLEGRO_EVENT event, ALLEGRO_EVENT_QUEUE* queue, ALLEGRO_KEYBOARD
   if(*redraw && al_is_event_queue_empty(queue) && *screen == 2){
 
     al_clear_to_color(al_map_rgb(0, 0, 100));
-    game_background(player_radius, shield, mouse_pos_x, mouse_pos_y);
+    game_background(player_radius, shield, mouse_pos_x, mouse_pos_y, font);
     enemy_logic(timer, enemies, index_enemies, max_enemies,
                 mouse_pos_x, mouse_pos_y, shield, player_radius);
     al_flip_display();
