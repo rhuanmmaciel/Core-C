@@ -249,13 +249,74 @@ void set_difficulty(ALLEGRO_EVENT event, ALLEGRO_EVENT_QUEUE* queue, ALLEGRO_KEY
 
 }
 
+struct shot_properties{
+
+  int radius;
+
+  float pos_x;
+  float pos_y;
+
+  float x_velocity;
+  float y_velocity;
+
+  ALLEGRO_COLOR color;
+  bool alive;
+
+};
+
+void shots_colision(struct shot_properties* shot){
+
+  if(shot->pos_x > width || shot->pos_x < 0 ||
+     shot->pos_y > height || shot->pos_y < 0) shot->alive = false;
+
+}
+
+void shots_generation(struct shot_properties* shot, float* shield, float gun_size, float* player_radius){
+
+  shot->radius = 2;
+
+  shot->pos_x = (*player_radius + gun_size) * (-cos(*shield + M_PI / 2)) + half_width;
+  shot->pos_y = (*player_radius + gun_size) * (-sin(*shield + M_PI / 2)) + half_height;
+  
+  shot->x_velocity = shot->pos_x - half_width;
+  shot->y_velocity = shot->pos_y - half_height;
+
+  shot->color = al_map_rgb(255, 0, 0);
+  shot->alive = true;
+
+}
+
+void shots_movement(struct shot_properties* shot){
+
+  float speed = 0.05;
+
+  shot->pos_x += shot->x_velocity * speed;
+  shot->pos_y += shot->y_velocity * speed;
+
+}
+
+void gun_logic(bool shot_fired, struct shot_properties* shot, float* shield, float gun_size, float* player_radius){
+
+  if(shot_fired && !shot->alive) shots_generation(shot, shield, gun_size, player_radius);
+  
+  shots_movement(shot);
+  shots_colision(shot);
+
+  if(shot->alive) al_draw_filled_circle(shot->pos_x, shot->pos_y,
+                                        shot->radius, shot->color);
+  
+}
+
 struct enemy{
 
   int radius;
+
   float pos_x;
   float pos_y;
+
   float vel_pos_x;
   float vel_pos_y;
+
   ALLEGRO_COLOR color;
   bool alive;
 
@@ -266,29 +327,36 @@ void enemy_generation(struct enemy enemies[], int* index_enemies, int* max_enemi
   int side = rand() % 4;
   bool axes[2];
 
-  if(*index_enemies < *max_enemies && enemies[*index_enemies].alive == false){
+  if(*index_enemies < *max_enemies && !enemies[*index_enemies].alive){
 
     switch(side){
 
       case 0:
+
         enemies[*index_enemies].pos_x = 0;
         enemies[*index_enemies].pos_y = rand() % height;
         axes[0] = true;
         axes[1] = enemies[*index_enemies].pos_y >= half_height ? false : true;
         break;
+
       case 1: 
+
         enemies[*index_enemies].pos_x = width;
         enemies[*index_enemies].pos_y =rand() % height; 
         axes[1] = enemies[*index_enemies].pos_y >= half_height ? false : true;
         axes[0] = false;
         break;
+
       case 2:
+
         enemies[*index_enemies].pos_x = rand() % width;
         enemies[*index_enemies].pos_y = 0;
         axes[1] = true;
         axes[0] = enemies[*index_enemies].pos_x >= half_width ? false : true;
         break;
+
       case 3: 
+      
         enemies[*index_enemies].pos_x = rand() % width;
         enemies[*index_enemies].pos_y = height;
         axes[1] = false; 
@@ -297,19 +365,19 @@ void enemy_generation(struct enemy enemies[], int* index_enemies, int* max_enemi
 
     }
 
-    float velocity = 0.01;
+    float speed = 0.01;
 
-    float x_velocity = axes[0] ? abs(enemies[*index_enemies].pos_x - half_width) * velocity:
-                                 -abs(enemies[*index_enemies].pos_x - half_width) * velocity;
+    float x_velocity = axes[0] ? abs(enemies[*index_enemies].pos_x - half_width) * speed:
+                                 -abs(enemies[*index_enemies].pos_x - half_width) * speed;
 
-    float y_velocity = axes[1] ? abs(enemies[*index_enemies].pos_y - half_height) * velocity:
-                                 -abs(enemies[*index_enemies].pos_y - half_height) * velocity;
+    float y_velocity = axes[1] ? abs(enemies[*index_enemies].pos_y - half_height) * speed:
+                                 -abs(enemies[*index_enemies].pos_y - half_height) * speed;
 
 
     enemies[*index_enemies].vel_pos_x = x_velocity;
     enemies[*index_enemies].vel_pos_y = y_velocity;
     enemies[*index_enemies].radius = rand() % 5 + 5;
-    enemies[*index_enemies].color = al_map_rgb(0, 0, 0);
+    enemies[*index_enemies].color = al_map_rgb(129, 0, 0);
     enemies[*index_enemies].alive = true;
     *index_enemies += *index_enemies < *max_enemies - 1 ? 1 : - *max_enemies - 1;
 
@@ -328,13 +396,17 @@ void colision_check(struct enemy enemies[], int i, float* shield, float* player_
 
   float enemy_angle = M_PI / 2 + atan((enemies[i].pos_y - half_height) / (enemies[i].pos_x - half_width));
   enemy_angle += enemies[i].pos_x - half_width >= 0 ? M_PI : 0;
-  bool correction = enemy_angle > 3 * M_PI / 2 && *shield < M_PI / 2; 
+   
+  enemy_angle -= enemy_angle > 3 * M_PI / 2 && *shield < M_PI / 2 ?
+                 2 * M_PI : 0;
+  enemy_angle += enemy_angle < M_PI / 2 && *shield > 3 * M_PI / 2 ?
+                 2 * M_PI : 0;                  
 
   bool player_hitted = pow(half_width - enemies[i].pos_x, 2) + pow(half_height - enemies[i].pos_y, 2)
                        <= pow(*player_radius + enemies[i].radius, 2);
   bool edge_hitted = enemies[i].pos_x > width || enemies[i].pos_x < 0 ||
                      enemies[i].pos_y > height || enemies[i].pos_y < 0;
-  bool shield_hitted = enemy_angle >= *shield - M_PI / 2 && enemy_angle <= (correction ? 2 * M_PI - *shield + M_PI / 2: *shield + M_PI / 2)
+  bool shield_hitted = enemy_angle >= *shield - M_PI / 2 && enemy_angle <= *shield + M_PI / 2
                        && sqrt(pow(enemies[i].pos_x - half_width, 2) + pow(enemies[i].pos_y - half_height, 2))
                        <= enemies[i].radius + player_shield_radius
                        && sqrt(pow(enemies[i].pos_x - half_width, 2) + pow(enemies[i].pos_y - half_height, 2)) 
@@ -350,16 +422,15 @@ void enemy_logic(ALLEGRO_TIMER* timer, struct enemy enemies[], int* index_enemie
                  int* max_enemies, float* mouse_pos_x, float* mouse_pos_y, float* shield,
                  float* player_radius, float player_shield_radius){
 
-  if(al_get_timer_count(timer) % 100 == 0)enemy_generation(enemies, index_enemies, max_enemies);
+  if(al_get_timer_count(timer) % 100 == 0) enemy_generation(enemies, index_enemies, max_enemies);
 
   for(int i = 0; i < *max_enemies; i++){
  
     movement_update(enemies, i); 
     colision_check(enemies, i, shield, player_radius, player_shield_radius);
 
-    if(enemies[i].alive == true)
-      al_draw_filled_circle(enemies[i].pos_x, enemies[i].pos_y,
-                            enemies[i].radius, enemies[i].color);
+    if(enemies[i].alive) al_draw_filled_circle(enemies[i].pos_x, enemies[i].pos_y,
+                                               enemies[i].radius, enemies[i].color);
   }
   
 }
@@ -380,14 +451,14 @@ void game_background(float* player_radius, float player_shield_radius, float* sh
   float gun_point_3_y = *player_radius * (-sin(*shield - 5 + M_PI / 2)) + half_height;
 
   must_init(al_init_image_addon(), "image addon");
-  ALLEGRO_BITMAP* background = al_load_bitmap("background.jpg");
+  ALLEGRO_BITMAP* background = al_load_bitmap("background.png");
   must_init(background, "background");
   al_draw_bitmap(background, 0, 0, 0);
-  al_draw_filled_circle(half_width, half_height, *player_radius, al_map_rgb(4, 98, 97));
+  al_draw_filled_circle(half_width, half_height, *player_radius, al_map_rgb(125, 104, 0));
   al_draw_arc(half_width, half_height, player_shield_radius, *shield, M_PI, 
-              al_map_rgb(4, 98, 97), 3);
+              al_map_rgb(125, 104, 0), 3);
   al_draw_filled_triangle(gun_point_1_x, gun_point_1_y, gun_point_2_x, gun_point_2_y,
-                          gun_point_3_x, gun_point_3_y, al_map_rgb(50, 98, 200));
+                          gun_point_3_x, gun_point_3_y, al_map_rgb(125, 104, 0));
   al_destroy_bitmap(background);
 
 }
@@ -396,8 +467,9 @@ void play_game(ALLEGRO_EVENT event, ALLEGRO_EVENT_QUEUE* queue, ALLEGRO_KEYBOARD
                ALLEGRO_FONT* font, ALLEGRO_TIMER* timer, bool* game, bool* redraw, int* screen,
                float* player_radius, float player_shield_radius, float* shield, float* mouse_pos_x, 
                float* mouse_pos_y, struct enemy enemies[], int* index_enemies, int* max_enemies,
-               float gun_size){
+               float gun_size, struct shot_properties* shot){
 
+  bool shot_fired = false;
   switch (event.type){
 
     case ALLEGRO_EVENT_TIMER:
@@ -418,6 +490,7 @@ void play_game(ALLEGRO_EVENT event, ALLEGRO_EVENT_QUEUE* queue, ALLEGRO_KEYBOARD
       *mouse_pos_x = event.mouse.x - half_width;
       *mouse_pos_y = event.mouse.y - half_height; 
       break;
+
   }
 
   if(*redraw && al_is_event_queue_empty(queue) && *screen == 2){
@@ -427,6 +500,14 @@ void play_game(ALLEGRO_EVENT event, ALLEGRO_EVENT_QUEUE* queue, ALLEGRO_KEYBOARD
                    font, gun_size);
     enemy_logic(timer, enemies, index_enemies, max_enemies,
                 mouse_pos_x, mouse_pos_y, shield, player_radius, player_shield_radius); 
+  
+    ALLEGRO_MOUSE_STATE state;
+    al_get_mouse_state(&state);
+    if (state.buttons & 1)
+      shot_fired = true; 
+    
+    gun_logic(shot_fired, shot, shield, gun_size, player_radius);
+    
     al_flip_display();
 
     *redraw = false;
@@ -467,6 +548,9 @@ int main(){
   for(int i = 0; i < max_enemies; i++)
     enemies[i].alive = false;
 
+  struct shot_properties shot;
+  //shot.alive = false;
+
   time_t t;
   srand(time(&t));
 
@@ -494,7 +578,7 @@ int main(){
         
         play_game(event, queue, keyboard, font, timer, &game, &redraw,
                   &screen, &player_radius, player_shield_radius, &shield, &mouse_pos_x,
-                  &mouse_pos_y, enemies, &index_enemies, &max_enemies, gun_size);
+                  &mouse_pos_y, enemies, &index_enemies, &max_enemies, gun_size, &shot);
         break;
 
       case 3:
