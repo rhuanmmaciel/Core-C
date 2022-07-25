@@ -267,13 +267,13 @@ struct shot_properties{
 void shots_colision(struct shot_properties* shot){
 
   if(shot->pos_x > width || shot->pos_x < 0 ||
-     shot->pos_y > height || shot->pos_y < 0) shot->alive = false;
+     shot->pos_y > height || shot->pos_y < 0) shot->alive = false;  
 
 }
 
 void shots_generation(struct shot_properties* shot, float* shield, float gun_size, float* player_radius){
 
-  shot->radius = 2;
+  shot->radius = 5;
 
   shot->pos_x = (*player_radius + gun_size) * (-cos(*shield + M_PI / 2)) + half_width;
   shot->pos_y = (*player_radius + gun_size) * (-sin(*shield + M_PI / 2)) + half_height;
@@ -288,14 +288,15 @@ void shots_generation(struct shot_properties* shot, float* shield, float gun_siz
 
 void shots_movement(struct shot_properties* shot){
 
-  float speed = 0.05;
+  float speed = 0.2;
 
   shot->pos_x += shot->x_velocity * speed;
   shot->pos_y += shot->y_velocity * speed;
 
 }
 
-void gun_logic(bool shot_fired, struct shot_properties* shot, float* shield, float gun_size, float* player_radius){
+void gun_logic(bool shot_fired, struct shot_properties* shot, float* shield, float gun_size,
+               float* player_radius){
 
   if(shot_fired && !shot->alive) shots_generation(shot, shield, gun_size, player_radius);
   
@@ -332,7 +333,6 @@ void enemy_generation(struct enemy enemies[], int* index_enemies, int* max_enemi
     switch(side){
 
       case 0:
-
         enemies[*index_enemies].pos_x = 0;
         enemies[*index_enemies].pos_y = rand() % height;
         axes[0] = true;
@@ -340,7 +340,6 @@ void enemy_generation(struct enemy enemies[], int* index_enemies, int* max_enemi
         break;
 
       case 1: 
-
         enemies[*index_enemies].pos_x = width;
         enemies[*index_enemies].pos_y =rand() % height; 
         axes[1] = enemies[*index_enemies].pos_y >= half_height ? false : true;
@@ -348,7 +347,6 @@ void enemy_generation(struct enemy enemies[], int* index_enemies, int* max_enemi
         break;
 
       case 2:
-
         enemies[*index_enemies].pos_x = rand() % width;
         enemies[*index_enemies].pos_y = 0;
         axes[1] = true;
@@ -356,7 +354,6 @@ void enemy_generation(struct enemy enemies[], int* index_enemies, int* max_enemi
         break;
 
       case 3: 
-      
         enemies[*index_enemies].pos_x = rand() % width;
         enemies[*index_enemies].pos_y = height;
         axes[1] = false; 
@@ -365,7 +362,7 @@ void enemy_generation(struct enemy enemies[], int* index_enemies, int* max_enemi
 
     }
 
-    float speed = 0.01;
+    float speed = 0.004;
 
     float x_velocity = axes[0] ? abs(enemies[*index_enemies].pos_x - half_width) * speed:
                                  -abs(enemies[*index_enemies].pos_x - half_width) * speed;
@@ -392,10 +389,11 @@ void movement_update(struct enemy enemies[], int i){
 
 }
 
-void colision_check(struct enemy enemies[], int i, float* shield, float* player_radius, float player_shield_radius){
+void colision_check(struct enemy enemies[], int i, float* shield, float* player_radius, float player_shield_radius,
+                    struct shot_properties* shot){
 
   float enemy_angle = M_PI / 2 + atan((enemies[i].pos_y - half_height) / (enemies[i].pos_x - half_width));
-  enemy_angle += enemies[i].pos_x - half_width >= 0 ? M_PI : 0;
+  enemy_angle += enemies[i].pos_x >= half_width ? M_PI : 0;
    
   enemy_angle -= enemy_angle > 3 * M_PI / 2 && *shield < M_PI / 2 ?
                  2 * M_PI : 0;
@@ -411,26 +409,46 @@ void colision_check(struct enemy enemies[], int i, float* shield, float* player_
                        <= enemies[i].radius + player_shield_radius
                        && sqrt(pow(enemies[i].pos_x - half_width, 2) + pow(enemies[i].pos_y - half_height, 2)) 
                        > enemies[i].radius + player_shield_radius - 10;
-  if(player_hitted && enemies[i].alive) (*player_radius) -= 0.5;                                                               
 
-  if((player_hitted || edge_hitted || shield_hitted) && enemies[i].alive)
+  if(player_hitted) (*player_radius) -= 0.5;                                                               
+
+  if((player_hitted || edge_hitted || shield_hitted))
     enemies[i].alive = false;
+
+  if(shot->alive){
+
+    float distance = sqrt(pow(shot->pos_x - (enemies[i].pos_x), 2) +
+                          pow(shot->pos_y - (enemies[i].pos_y), 2));
+
+    if(distance <= shot->radius + enemies[i].radius){
+
+      shot->alive = false;
+      enemies[i].alive = false;
+      *player_radius += 0.5;
+
+    }
+
+  }
 
 }
 
 void enemy_logic(ALLEGRO_TIMER* timer, struct enemy enemies[], int* index_enemies,
                  int* max_enemies, float* mouse_pos_x, float* mouse_pos_y, float* shield,
-                 float* player_radius, float player_shield_radius){
+                 float* player_radius, float player_shield_radius, struct shot_properties* shot){
 
   if(al_get_timer_count(timer) % 100 == 0) enemy_generation(enemies, index_enemies, max_enemies);
 
   for(int i = 0; i < *max_enemies; i++){
  
-    movement_update(enemies, i); 
-    colision_check(enemies, i, shield, player_radius, player_shield_radius);
+    if(enemies[i].alive){
 
-    if(enemies[i].alive) al_draw_filled_circle(enemies[i].pos_x, enemies[i].pos_y,
-                                               enemies[i].radius, enemies[i].color);
+      movement_update(enemies, i); 
+      colision_check(enemies, i, shield, player_radius, player_shield_radius, shot);
+
+      al_draw_filled_circle(enemies[i].pos_x, enemies[i].pos_y,
+                            enemies[i].radius, enemies[i].color);
+      }
+
   }
   
 }
@@ -499,7 +517,8 @@ void play_game(ALLEGRO_EVENT event, ALLEGRO_EVENT_QUEUE* queue, ALLEGRO_KEYBOARD
     game_background(player_radius, player_shield_radius, shield, mouse_pos_x, mouse_pos_y,
                    font, gun_size);
     enemy_logic(timer, enemies, index_enemies, max_enemies,
-                mouse_pos_x, mouse_pos_y, shield, player_radius, player_shield_radius); 
+                mouse_pos_x, mouse_pos_y, shield, player_radius,
+                player_shield_radius, shot); 
   
     ALLEGRO_MOUSE_STATE state;
     al_get_mouse_state(&state);
