@@ -11,8 +11,8 @@
 
 //gcc t.c $(pkg-config allegro-5 allegro_font-5 allegro_ttf-5 allegro_image-5 allegro_primitives-5 --libs --cflags) -lm
 
-const int width = 1280;
-const int height = 720;
+const int width = 1200;
+const int height = 640;
 const int half_width = width / 2;
 const int half_height = height / 2;
 const float font_size = (225.0 / 8.0) * ((float) width / height);
@@ -184,7 +184,7 @@ void draw_difficulty(ALLEGRO_FONT* font, float rect_x_pos1, float rect_x_pos2, f
 }
 
 void set_difficulty(ALLEGRO_EVENT event, ALLEGRO_EVENT_QUEUE* queue, ALLEGRO_KEYBOARD_STATE keyboard,
-                    ALLEGRO_FONT* font,  bool* game, bool* redraw, int* screen, int* difficulty,
+                    ALLEGRO_FONT* font, ALLEGRO_TIMER* timer, bool* game, bool* redraw, int* screen, int* difficulty,
                     ALLEGRO_COLOR button_colors[]){
 
   float rect_x_pos1 = width * 0.40;
@@ -235,6 +235,7 @@ void set_difficulty(ALLEGRO_EVENT event, ALLEGRO_EVENT_QUEUE* queue, ALLEGRO_KEY
    }
 
   *screen = *difficulty == 0 ? *screen : 2; 
+  if(*screen == 2) al_set_timer_count(timer, 0);
 
   if(*redraw && al_is_event_queue_empty(queue) && *screen == 1){
 
@@ -321,6 +322,8 @@ struct enemy{
   ALLEGRO_COLOR color;
   bool alive;
 
+  bool ally;
+
 };
 
 void enemy_generation(struct enemy enemies[], int* index_enemies, int* max_enemies){
@@ -362,7 +365,11 @@ void enemy_generation(struct enemy enemies[], int* index_enemies, int* max_enemi
 
     }
 
-    float speed = 0.004;
+    int speed_max = 10;
+    int speed_min = 5;
+
+    float speed = (float) (rand() % (speed_max - speed_min) + speed_min) / 1000;
+
 
     float x_velocity = axes[0] ? abs(enemies[*index_enemies].pos_x - half_width) * speed:
                                  -abs(enemies[*index_enemies].pos_x - half_width) * speed;
@@ -370,13 +377,20 @@ void enemy_generation(struct enemy enemies[], int* index_enemies, int* max_enemi
     float y_velocity = axes[1] ? abs(enemies[*index_enemies].pos_y - half_height) * speed:
                                  -abs(enemies[*index_enemies].pos_y - half_height) * speed;
 
-
     enemies[*index_enemies].vel_pos_x = x_velocity;
     enemies[*index_enemies].vel_pos_y = y_velocity;
-    enemies[*index_enemies].radius = rand() % 5 + 5;
-    enemies[*index_enemies].color = al_map_rgb(129, 0, 0);
+
+    enemies[*index_enemies].radius = rand() % 5 + 4;
+
     enemies[*index_enemies].alive = true;
+
     *index_enemies += *index_enemies < *max_enemies - 1 ? 1 : - *max_enemies - 1;
+
+    int probability_ally = 10;
+
+    enemies[*index_enemies].ally = rand() % probability_ally == 0;
+
+    enemies[*index_enemies].color = enemies[*index_enemies].ally ? al_map_rgb(0, 204, 204) : al_map_rgb(129, 0, 0);
 
   }
 
@@ -410,7 +424,16 @@ void colision_check(struct enemy enemies[], int i, float* shield, float* player_
                        && sqrt(pow(enemies[i].pos_x - half_width, 2) + pow(enemies[i].pos_y - half_height, 2)) 
                        > enemies[i].radius + player_shield_radius - 10;
 
-  if(player_hitted) (*player_radius) -= 0.5;                                                               
+  float enemy_area = M_PI * pow(enemies[i].radius, 2);
+  float player_area = M_PI * pow(*player_radius, 2);
+
+  float difference = enemies[i].ally ? player_area + enemy_area : player_area - enemy_area;                       
+  float radius_change = difference > 0 ? sqrt(difference / M_PI) : 0;
+
+  if(player_hitted) *player_radius = radius_change;
+
+  difference = player_area + enemy_area;
+  radius_change = difference > 0 ? sqrt(difference / M_PI) : 0;
 
   if((player_hitted || edge_hitted || shield_hitted))
     enemies[i].alive = false;
@@ -424,7 +447,8 @@ void colision_check(struct enemy enemies[], int i, float* shield, float* player_
 
       shot->alive = false;
       enemies[i].alive = false;
-      *player_radius += 0.5;
+      if(!enemies[i].ally)
+        *player_radius = radius_change;
 
     }
 
@@ -436,7 +460,7 @@ void enemy_logic(ALLEGRO_TIMER* timer, struct enemy enemies[], int* index_enemie
                  int* max_enemies, float* mouse_pos_x, float* mouse_pos_y, float* shield,
                  float* player_radius, float player_shield_radius, struct shot_properties* shot){
 
-  if(al_get_timer_count(timer) % 100 == 0) enemy_generation(enemies, index_enemies, max_enemies);
+  if(rand() % 50 == 0) enemy_generation(enemies, index_enemies, max_enemies);
 
   for(int i = 0; i < *max_enemies; i++){
  
@@ -453,8 +477,8 @@ void enemy_logic(ALLEGRO_TIMER* timer, struct enemy enemies[], int* index_enemie
   
 }
 
-void game_background(float* player_radius, float player_shield_radius, float* shield, float* mouse_pos_x, float* mouse_pos_y,
-                     ALLEGRO_FONT* font, float gun_size){
+void game_background(ALLEGRO_FONT* font, ALLEGRO_TIMER* timer, float* player_radius, float player_shield_radius, float* shield,
+                     float* mouse_pos_x, float* mouse_pos_y, float gun_size, int* player_life){
 
   *shield = M_PI / 2 + atan(*mouse_pos_y / *mouse_pos_x);
   *shield += *mouse_pos_x >= 0 ? M_PI : 0;
@@ -471,12 +495,25 @@ void game_background(float* player_radius, float player_shield_radius, float* sh
   must_init(al_init_image_addon(), "image addon");
   ALLEGRO_BITMAP* background = al_load_bitmap("background.png");
   must_init(background, "background");
-  al_draw_bitmap(background, 0, 0, 0);
-  al_draw_filled_circle(half_width, half_height, *player_radius, al_map_rgb(125, 104, 0));
+  al_draw_bitmap(background, 0, 0, 0); 
+
+  al_draw_filled_circle(half_width, half_height, *player_radius, al_map_rgb(0, 0, 0));
+  al_draw_circle(half_width, half_height, *player_radius, al_map_rgb(0, 123, 123), 3);
   al_draw_arc(half_width, half_height, player_shield_radius, *shield, M_PI, 
-              al_map_rgb(125, 104, 0), 3);
+              al_map_rgb(0, 0, 0), 3);
   al_draw_filled_triangle(gun_point_1_x, gun_point_1_y, gun_point_2_x, gun_point_2_y,
-                          gun_point_3_x, gun_point_3_y, al_map_rgb(125, 104, 0));
+                          gun_point_3_x, gun_point_3_y, al_map_rgb(0, 0, 0));
+  al_draw_triangle(gun_point_1_x, gun_point_1_y, gun_point_2_x, gun_point_2_y,
+                          gun_point_3_x, gun_point_3_y, al_map_rgb(0, 123, 123), 3);
+
+  al_draw_filled_rectangle(0, 0, width, height * 0.05, al_map_rgb(0, 0, 0));
+  al_draw_rectangle(0, 0, width, height * 0.05, al_map_rgb(204, 102, 0), 3);
+
+  al_draw_textf(font, al_map_rgb(255, 255, 255), width * 0.05, 0, ALLEGRO_ALIGN_LEFT,
+                "Timer: %.2f", ALLEGRO_MSECS_TO_SECS(al_get_timer_count(timer) * 10));
+
+  al_draw_textf(font, al_map_rgb(255, 255, 255), width * 0.5, 0, ALLEGRO_ALIGN_CENTRE, "Lifes remaining: %d", *player_life);
+
   al_destroy_bitmap(background);
 
 }
@@ -485,7 +522,7 @@ void play_game(ALLEGRO_EVENT event, ALLEGRO_EVENT_QUEUE* queue, ALLEGRO_KEYBOARD
                ALLEGRO_FONT* font, ALLEGRO_TIMER* timer, bool* game, bool* redraw, int* screen,
                float* player_radius, float player_shield_radius, float* shield, float* mouse_pos_x, 
                float* mouse_pos_y, struct enemy enemies[], int* index_enemies, int* max_enemies,
-               float gun_size, struct shot_properties* shot){
+               float gun_size, struct shot_properties* shot, int* player_life){
 
   bool shot_fired = false;
   switch (event.type){
@@ -514,11 +551,18 @@ void play_game(ALLEGRO_EVENT event, ALLEGRO_EVENT_QUEUE* queue, ALLEGRO_KEYBOARD
   if(*redraw && al_is_event_queue_empty(queue) && *screen == 2){
 
     al_clear_to_color(al_map_rgb(0, 0, 100));
-    game_background(player_radius, player_shield_radius, shield, mouse_pos_x, mouse_pos_y,
-                   font, gun_size);
+    game_background(font, timer, player_radius, player_shield_radius, shield,
+                    mouse_pos_x, mouse_pos_y, gun_size, player_life);
     enemy_logic(timer, enemies, index_enemies, max_enemies,
                 mouse_pos_x, mouse_pos_y, shield, player_radius,
-                player_shield_radius, shot); 
+                player_shield_radius, shot);    
+
+    if(*player_radius <= 0 && *player_life > 0){
+
+      *player_radius = width / height * 20;
+      (*player_life)--;
+
+    }                            
   
     ALLEGRO_MOUSE_STATE state;
     al_get_mouse_state(&state);
@@ -537,14 +581,21 @@ int main(){
 
   inits();
 
-  ALLEGRO_TIMER* timer = al_create_timer(1.0 / 60.0);
+  ALLEGRO_TIMER* timer = al_create_timer(1.0 / 100.0);
   must_init(timer, "timer");
+
   ALLEGRO_EVENT_QUEUE* queue = al_create_event_queue();
   must_init(queue, "queue");
+
   ALLEGRO_DISPLAY* display = al_create_display(width, height);
   must_init(display, "display");
+
   ALLEGRO_FONT* font = al_load_font("font.ttf", font_size, 0);
   must_init(font, "font");
+
+  ALLEGRO_FONT* game_font = al_load_font("game_font.ttf", font_size / 3, 0);
+  must_init(game_font, "game_font");
+
   ALLEGRO_EVENT event;
   ALLEGRO_KEYBOARD_STATE keyboard;
 
@@ -560,6 +611,7 @@ int main(){
   float mouse_pos_x = 0;
   float mouse_pos_y = - half_height;
   float gun_size = player_radius * 0.8; 
+  int player_life = 3;
 
   int max_enemies = 30;
   int index_enemies = 0;
@@ -574,7 +626,6 @@ int main(){
   srand(time(&t));
 
   int difficulty = 0;
-
   al_start_timer(timer);
 
   while(game){
@@ -589,15 +640,16 @@ int main(){
 
       case 1:
         
-        set_difficulty(event, queue, keyboard, font, &game, &redraw, &screen,
+        set_difficulty(event, queue, keyboard, font, timer, &game, &redraw, &screen,
                        &difficulty, button_colors);
         break;  
 
       case 2: 
         
-        play_game(event, queue, keyboard, font, timer, &game, &redraw,
+        play_game(event, queue, keyboard, game_font, timer, &game, &redraw,
                   &screen, &player_radius, player_shield_radius, &shield, &mouse_pos_x,
-                  &mouse_pos_y, enemies, &index_enemies, &max_enemies, gun_size, &shot);
+                  &mouse_pos_y, enemies, &index_enemies, &max_enemies, gun_size, &shot,
+                  &player_life);
         break;
 
       case 3:
