@@ -250,9 +250,21 @@ void set_difficulty(ALLEGRO_EVENT event, ALLEGRO_EVENT_QUEUE* queue, ALLEGRO_KEY
 
 }
 
-void armor_logic(bool* armor){
+void level_logic(int* level, int player_points){
+
+  int criteria = 50 + *level * 10;
+
+  *level += floor((player_points) / criteria) >= *level ? 1 : 0;
+
+}
+
+void armor_logic(bool* armor, float* player_radius){
 
   *armor = true;
+
+  if(*player_radius > width / height * 10) (*player_radius) -= 0.01;
+  else *armor = false;
+
 
 }
 
@@ -449,9 +461,6 @@ void colision_check(struct enemy enemies[], int i, float* shield, float* player_
 
   if(player_hitted) *player_radius = radius_change;
 
-  difference = player_area + enemy_area;
-  radius_change = difference > 0 ? sqrt(difference / M_PI) : 0;
-
   if(shield_hitted && !enemies[i].ally) (*player_points)++;
 
   if((player_hitted || edge_hitted || shield_hitted))
@@ -468,7 +477,7 @@ void colision_check(struct enemy enemies[], int i, float* shield, float* player_
       enemies[i].alive = false;
       
       if(!enemies[i].ally){
-        *player_radius = radius_change;
+        *player_radius += *player_radius * 0.02;
         *player_points += 2;
       }
 
@@ -502,10 +511,13 @@ void enemy_logic(ALLEGRO_TIMER* timer, struct enemy enemies[], int* index_enemie
 }
 
 void game_background(ALLEGRO_FONT* font, ALLEGRO_TIMER* timer, float* player_radius, float player_shield_radius, float* shield,
-                     float* mouse_pos_x, float* mouse_pos_y, float gun_size, int* player_life, int* player_points, bool armor){
+                     float* mouse_pos_x, float* mouse_pos_y, float gun_size, int* player_life, int* player_points, bool armor,
+                     int* level, int levels_change[]){
 
   *shield = M_PI / 2 + atan(*mouse_pos_y / *mouse_pos_x);
   *shield += *mouse_pos_x >= 0 ? M_PI : 0;
+
+  bool pause = false;
 
   float gun_point_1_x = (*player_radius + gun_size) * (-cos(*shield + M_PI / 2)) + half_width;
   float gun_point_1_y = (*player_radius + gun_size) * (-sin(*shield + M_PI / 2)) + half_height;
@@ -515,6 +527,9 @@ void game_background(ALLEGRO_FONT* font, ALLEGRO_TIMER* timer, float* player_rad
 
   float gun_point_3_x = *player_radius * (-cos(*shield - 5 + M_PI / 2)) + half_width;
   float gun_point_3_y = *player_radius * (-sin(*shield - 5 + M_PI / 2)) + half_height;
+
+  int criteria = 50 + *level * 10;
+  levels_change[*level] = criteria + levels_change[*level - 1] + 10 * (*level - 1);
 
   must_init(al_init_image_addon(), "image addon");
   ALLEGRO_BITMAP* background = al_load_bitmap("background.png");
@@ -535,12 +550,16 @@ void game_background(ALLEGRO_FONT* font, ALLEGRO_TIMER* timer, float* player_rad
   al_draw_filled_rectangle(0, 0, width, height * 0.05, al_map_rgb(0, 0, 0));
   al_draw_rectangle(0, 0, width, height * 0.05, al_map_rgb(204, 102, 0), 3);
 
-  al_draw_textf(font, al_map_rgb(255, 255, 255), width * 0.05, 0, ALLEGRO_ALIGN_LEFT,
-                "Timer: %.2f", ALLEGRO_MSECS_TO_SECS(al_get_timer_count(timer) * 10));
+  al_draw_textf(font, al_map_rgb(255, 255, 255), width * 0.01, 0, ALLEGRO_ALIGN_LEFT,
+                "Tempo: %.2f", ALLEGRO_MSECS_TO_SECS(al_get_timer_count(timer) * 10));
 
-  al_draw_textf(font, al_map_rgb(255, 255, 255), width * 0.5, 0, ALLEGRO_ALIGN_CENTRE, "Lifes remaining: %d", *player_life);
+  al_draw_textf(font, al_map_rgb(255, 255, 255), width * 0.25, 0, ALLEGRO_ALIGN_LEFT, "Vidas restantes: %d", *player_life);
 
-  al_draw_textf(font, al_map_rgb(255, 255, 255), width * 0.95, 0, ALLEGRO_ALIGN_RIGHT, "Points: %d", *player_points);
+  al_draw_textf(font, al_map_rgb(255, 255, 255), width * 0.5, 0, ALLEGRO_ALIGN_CENTRE, "%d pts", *player_points);
+
+  al_draw_textf(font, al_map_rgb(255, 255, 255), width * 0.99, 0, ALLEGRO_ALIGN_RIGHT, "(Próximo %d pts) Nível: %d", levels_change[*level], *level);
+
+  al_draw_textf(font, al_map_rgb(255, 255, 255), width * 0.60, 0, ALLEGRO_ALIGN_RIGHT, "Pause: %d", pause);
 
   al_destroy_bitmap(background);
 
@@ -551,7 +570,7 @@ void play_game(ALLEGRO_EVENT event, ALLEGRO_EVENT_QUEUE* queue, ALLEGRO_KEYBOARD
                float* player_radius, float player_shield_radius, float* shield, float* mouse_pos_x, 
                float* mouse_pos_y, struct enemy enemies[], int* index_enemies, int* max_enemies,
                float gun_size, float* delay_1s, struct shot_properties* shot, int* player_life,
-               int* player_points){
+               int* player_points, int* level, int levels_change[]){
 
   bool shot_fired = false;
   bool armor = false;
@@ -574,14 +593,15 @@ void play_game(ALLEGRO_EVENT event, ALLEGRO_EVENT_QUEUE* queue, ALLEGRO_KEYBOARD
 
   al_get_keyboard_state(&keyboard);
   if(al_key_down(&keyboard, ALLEGRO_KEY_SPACE))
-    armor_logic(&armor); 
+    //armor_logic(&armor, player_radius); 
+    *player_points += 1;
 
   if(*redraw && al_is_event_queue_empty(queue) && *screen == 2){
 
     al_clear_to_color(al_map_rgb(0, 0, 100));
     game_background(font, timer, player_radius, player_shield_radius, shield,
                     mouse_pos_x, mouse_pos_y, gun_size, player_life, player_points,
-                    armor);
+                    armor, level, levels_change);
     enemy_logic(timer, enemies, index_enemies, max_enemies,
                 mouse_pos_x, mouse_pos_y, shield, player_radius,
                 player_shield_radius, shot, player_points, armor);    
@@ -599,6 +619,8 @@ void play_game(ALLEGRO_EVENT event, ALLEGRO_EVENT_QUEUE* queue, ALLEGRO_KEYBOARD
       shot_fired = true; 
     
     gun_logic(timer, shot_fired, shot, shield, gun_size, player_radius, delay_1s);
+
+    level_logic(level, *player_points);
     
     al_flip_display();
 
@@ -644,6 +666,7 @@ int main(){
   int player_life = 3;
   int player_points = 0;
 
+  struct shot_properties shot;
   float gun_size = player_radius * 0.8; 
   float delay_1s = 0;
 
@@ -653,8 +676,9 @@ int main(){
   for(int i = 0; i < max_enemies; i++)
     enemies[i].alive = false;
 
-  struct shot_properties shot;
-  //shot.alive = false;
+  int level = 1;
+  int levels_change[100];
+  levels_change[0] = 0;
 
   time_t t;
   srand(time(&t));
@@ -683,7 +707,7 @@ int main(){
         play_game(event, queue, keyboard, game_font, timer, &game, &redraw,
                   &screen, &player_radius, player_shield_radius, &shield, &mouse_pos_x,
                   &mouse_pos_y, enemies, &index_enemies, &max_enemies, gun_size, &delay_1s,
-                  &shot, &player_life, &player_points);
+                  &shot, &player_life, &player_points, &level, levels_change);
         break;
 
       case 3:
