@@ -184,8 +184,8 @@ void draw_difficulty(ALLEGRO_FONT* font, float rect_x_pos1, float rect_x_pos2, f
 }
 
 void set_difficulty(ALLEGRO_EVENT event, ALLEGRO_EVENT_QUEUE* queue, ALLEGRO_KEYBOARD_STATE keyboard,
-                    ALLEGRO_FONT* font, ALLEGRO_TIMER* timer, bool* game, bool* redraw, int* screen, int* difficulty,
-                    ALLEGRO_COLOR button_colors[]){
+                    ALLEGRO_FONT* font, ALLEGRO_TIMER* timer, bool* game, bool* redraw, int* screen,
+                    int* difficulty, ALLEGRO_COLOR button_colors[]){
 
   float rect_x_pos1 = width * 0.40;
   float rect_x_pos2 = width * 0.60;
@@ -250,21 +250,40 @@ void set_difficulty(ALLEGRO_EVENT event, ALLEGRO_EVENT_QUEUE* queue, ALLEGRO_KEY
 
 }
 
-void level_logic(int* level, int player_points){
+void level_logic(int* level, int player_points, int* player_life, bool* increasing_life){
 
   int criteria = 50 + *level * 10;
 
   *level += floor((player_points) / criteria) >= *level ? 1 : 0;
 
+  if(*level % 2 == 0 && *level % 10 != 0)
+    *increasing_life = true;
+
+  if(*level % 10 == 0 && *increasing_life){
+
+    (*player_life)++;
+    *increasing_life = false;
+
+  }
+
 }
 
-void armor_logic(bool* armor, float* player_radius){
+void armor_logic(ALLEGRO_TIMER* timer, bool* armor, float* player_radius, int* delay_armor){
+
+  if(*delay_armor == 0)
+    *delay_armor = ALLEGRO_MSECS_TO_SECS(al_get_timer_count(timer) * 10);
 
   *armor = true;
 
-  if(*player_radius > width / height * 10) (*player_radius) -= 0.01;
-  else *armor = false;
+  if(*player_radius > width / height * 10 && *delay_armor + 5 > ALLEGRO_MSECS_TO_SECS(al_get_timer_count(timer) * 10)){
 
+    (*player_radius) -= 0.008;
+
+  }else{
+  
+    *armor = false;
+
+  }
 
 }
 
@@ -278,19 +297,43 @@ struct shot_properties{
   float x_velocity;
   float y_velocity;
 
+  int direction_x;
+  int direction_y;
+
   ALLEGRO_COLOR color;
   bool alive;
+
+  bool missile;
+  int missile_resistance_edges;
+  int missile_resistance_enemies;
 
 };
 
 void shots_colision(struct shot_properties* shot){
 
-  if(shot->pos_x > width || shot->pos_x < 0 ||
-     shot->pos_y > height || shot->pos_y < 0) shot->alive = false;  
+  bool x_edge_hitted = shot->pos_x > width || shot->pos_x < 0;
+
+  bool y_edge_hitted = shot->pos_y > height || shot->pos_y < 0;
+
+  if(x_edge_hitted || y_edge_hitted){ 
+
+    if(shot->missile && shot->missile_resistance_edges > 0){
+      
+      shot->missile_resistance_edges--;
+      
+      if(x_edge_hitted) shot->direction_x = -shot->direction_x;     
+       
+
+      if(y_edge_hitted) shot->direction_y = -shot->direction_y;
+        
+
+    }else shot->alive = false;
+
+  }      
 
 }
 
-void shots_generation(struct shot_properties* shot, float* shield, float gun_size, float* player_radius){
+void shots_generation(struct shot_properties* shot, float* shield, float gun_size, float* player_radius, bool missile){
 
   shot->radius = 5;
 
@@ -303,23 +346,37 @@ void shots_generation(struct shot_properties* shot, float* shield, float gun_siz
   shot->color = al_map_rgb(255, 0, 0);
   shot->alive = true;
 
+  shot->missile = missile;
+
+  shot->missile_resistance_edges = shot->missile ? 4 : 0;
+  shot->missile_resistance_enemies = shot->missile ? 2 : 0;
+
+  shot->direction_x = 1;
+  shot->direction_y = 1;
+
 }
 
 void shots_movement(struct shot_properties* shot){
 
   float speed = 0.2;
 
-  shot->pos_x += shot->x_velocity * speed;
-  shot->pos_y += shot->y_velocity * speed;
+  shot->pos_x += shot->x_velocity * speed * shot->direction_x;
+  shot->pos_y += shot->y_velocity * speed * shot->direction_y;
 
 }
 
 void gun_logic(ALLEGRO_TIMER* timer, bool shot_fired, struct shot_properties* shot, float* shield, float gun_size,
-               float* player_radius, float* delay_1s){
+               float* player_radius, float* delay_1s, int player_points, bool* missile, int* missile_update){
+
+  int previous_missile_update = *missile_update;
+  *missile_update += (int) floor(player_points / 50) >= *missile_update ? 1 : 0;
+
+  if(*missile_update > previous_missile_update)
+    *missile = true;
 
   if(shot_fired && !shot->alive && *delay_1s == 0){
 
-    shots_generation(shot, shield, gun_size, player_radius);
+    shots_generation(shot, shield, gun_size, player_radius, *missile);
     *delay_1s = ALLEGRO_MSECS_TO_SECS(al_get_timer_count(timer) * 10);        
 
   }
@@ -332,7 +389,9 @@ void gun_logic(ALLEGRO_TIMER* timer, bool shot_fired, struct shot_properties* sh
 
   if(shot->alive) al_draw_filled_circle(shot->pos_x, shot->pos_y,
                                         shot->radius, shot->color);
-  
+
+  if(*missile && shot->alive) *missile = false;  
+
 }
 
 struct enemy{
@@ -352,7 +411,7 @@ struct enemy{
 
 };
 
-void enemy_generation(struct enemy enemies[], int* index_enemies, int* max_enemies){
+void enemy_generation(struct enemy enemies[], int* index_enemies, int* max_enemies, int level, int difficulty){
 
   int side = rand() % 4;
   bool axes[2];
@@ -391,10 +450,10 @@ void enemy_generation(struct enemy enemies[], int* index_enemies, int* max_enemi
 
     }
 
-    int speed_max = 10;
-    int speed_min = 5;
+    float speed_max = difficulty + 7 * level / 2;
+    float speed_min = difficulty + 2 * level / 2;
 
-    float speed = (float) (rand() % (speed_max - speed_min) + speed_min) / 1000;
+    float speed = (rand() % (int) ceil(speed_max - speed_min) + speed_min) / 1000;
 
 
     float x_velocity = axes[0] ? abs(enemies[*index_enemies].pos_x - half_width) * speed:
@@ -461,7 +520,11 @@ void colision_check(struct enemy enemies[], int i, float* shield, float* player_
 
   if(player_hitted) *player_radius = radius_change;
 
-  if(shield_hitted && !enemies[i].ally) (*player_points)++;
+  if(shield_hitted && !enemies[i].ally)
+    if(armor)
+      (*player_points) += 3;
+    else
+      (*player_points)++;
 
   if((player_hitted || edge_hitted || shield_hitted))
     enemies[i].alive = false;
@@ -473,14 +536,18 @@ void colision_check(struct enemy enemies[], int i, float* shield, float* player_
 
     if(distance <= shot->radius + enemies[i].radius){
 
-      shot->alive = false;
-      enemies[i].alive = false;
-      
-      if(!enemies[i].ally){
+      if(!shot->missile || shot->missile_resistance_enemies <= 0) shot->alive = false;
+      else shot->missile_resistance_enemies--;
+
+      if(!enemies[i].ally){  
+        
+        enemies[i].alive = false;
+        
         *player_radius += *player_radius * 0.02;
         *player_points += 2;
+        
       }
-
+       
     }
 
   }
@@ -490,9 +557,11 @@ void colision_check(struct enemy enemies[], int i, float* shield, float* player_
 void enemy_logic(ALLEGRO_TIMER* timer, struct enemy enemies[], int* index_enemies,
                  int* max_enemies, float* mouse_pos_x, float* mouse_pos_y, float* shield,
                  float* player_radius, float player_shield_radius, struct shot_properties* shot,
-                 int* player_points, bool armor){
+                 int* player_points, bool armor, int level, int difficulty){
 
-  if(rand() % 50 == 0) enemy_generation(enemies, index_enemies, max_enemies);
+  int spawn_rate = 50 - level * 2 > 0 ? 50 - level * 2 : 1;
+
+  if(al_get_timer_count(timer) % spawn_rate == 0) enemy_generation(enemies, index_enemies, max_enemies, level, difficulty);
 
   for(int i = 0; i < *max_enemies; i++){
  
@@ -512,7 +581,7 @@ void enemy_logic(ALLEGRO_TIMER* timer, struct enemy enemies[], int* index_enemie
 
 void game_background(ALLEGRO_FONT* font, ALLEGRO_TIMER* timer, float* player_radius, float player_shield_radius, float* shield,
                      float* mouse_pos_x, float* mouse_pos_y, float gun_size, int* player_life, int* player_points, bool armor,
-                     int* level, int levels_change[]){
+                     int* level, int levels_change[], int missile){
 
   *shield = M_PI / 2 + atan(*mouse_pos_y / *mouse_pos_x);
   *shield += *mouse_pos_x >= 0 ? M_PI : 0;
@@ -559,7 +628,7 @@ void game_background(ALLEGRO_FONT* font, ALLEGRO_TIMER* timer, float* player_rad
 
   al_draw_textf(font, al_map_rgb(255, 255, 255), width * 0.99, 0, ALLEGRO_ALIGN_RIGHT, "(Próximo %d pts) Nível: %d", levels_change[*level], *level);
 
-  al_draw_textf(font, al_map_rgb(255, 255, 255), width * 0.60, 0, ALLEGRO_ALIGN_RIGHT, "Pause: %d", pause);
+  al_draw_textf(font, al_map_rgb(255, 255, 255), width * 0.70, 0, ALLEGRO_ALIGN_RIGHT, "Pause: %f", *player_radius);
 
   al_destroy_bitmap(background);
 
@@ -570,7 +639,8 @@ void play_game(ALLEGRO_EVENT event, ALLEGRO_EVENT_QUEUE* queue, ALLEGRO_KEYBOARD
                float* player_radius, float player_shield_radius, float* shield, float* mouse_pos_x, 
                float* mouse_pos_y, struct enemy enemies[], int* index_enemies, int* max_enemies,
                float gun_size, float* delay_1s, struct shot_properties* shot, int* player_life,
-               int* player_points, int* level, int levels_change[]){
+               int* player_points, int* level, int levels_change[], int difficulty, int* delay_armor,
+               bool* increasing_life, bool* missile, int* missile_update){
 
   bool shot_fired = false;
   bool armor = false;
@@ -592,8 +662,13 @@ void play_game(ALLEGRO_EVENT event, ALLEGRO_EVENT_QUEUE* queue, ALLEGRO_KEYBOARD
   }
 
   al_get_keyboard_state(&keyboard);
-  if(al_key_down(&keyboard, ALLEGRO_KEY_SPACE))
-    //armor_logic(&armor, player_radius); 
+  if(al_key_down(&keyboard, ALLEGRO_KEY_SPACE) && *level % 3 == 0)
+    armor_logic(timer, &armor, player_radius, delay_armor);
+
+  if(*level % 2 == 0)
+    *delay_armor = 0;
+
+  if(al_key_down(&keyboard, ALLEGRO_KEY_Z))
     *player_points += 1;
 
   if(*redraw && al_is_event_queue_empty(queue) && *screen == 2){
@@ -601,10 +676,11 @@ void play_game(ALLEGRO_EVENT event, ALLEGRO_EVENT_QUEUE* queue, ALLEGRO_KEYBOARD
     al_clear_to_color(al_map_rgb(0, 0, 100));
     game_background(font, timer, player_radius, player_shield_radius, shield,
                     mouse_pos_x, mouse_pos_y, gun_size, player_life, player_points,
-                    armor, level, levels_change);
+                    armor, level, levels_change, *missile);
     enemy_logic(timer, enemies, index_enemies, max_enemies,
                 mouse_pos_x, mouse_pos_y, shield, player_radius,
-                player_shield_radius, shot, player_points, armor);    
+                player_shield_radius, shot, player_points, armor,
+                *level, difficulty);    
 
     if(*player_radius <= 0 && *player_life > 0){
 
@@ -618,9 +694,10 @@ void play_game(ALLEGRO_EVENT event, ALLEGRO_EVENT_QUEUE* queue, ALLEGRO_KEYBOARD
     if (state.buttons & 1)
       shot_fired = true; 
     
-    gun_logic(timer, shot_fired, shot, shield, gun_size, player_radius, delay_1s);
+    gun_logic(timer, shot_fired, shot, shield, gun_size, player_radius,
+              delay_1s, *player_points, missile, missile_update);
 
-    level_logic(level, *player_points);
+    level_logic(level, *player_points, player_life, increasing_life);
     
     al_flip_display();
 
@@ -669,6 +746,8 @@ int main(){
   struct shot_properties shot;
   float gun_size = player_radius * 0.8; 
   float delay_1s = 0;
+  bool missile = false;
+  int missile_update = 1;
 
   int max_enemies = 10;
   int index_enemies = 0;
@@ -679,6 +758,9 @@ int main(){
   int level = 1;
   int levels_change[100];
   levels_change[0] = 0;
+  bool increasing_life = false;
+
+  int delay_armor = 0;
 
   time_t t;
   srand(time(&t));
@@ -707,7 +789,8 @@ int main(){
         play_game(event, queue, keyboard, game_font, timer, &game, &redraw,
                   &screen, &player_radius, player_shield_radius, &shield, &mouse_pos_x,
                   &mouse_pos_y, enemies, &index_enemies, &max_enemies, gun_size, &delay_1s,
-                  &shot, &player_life, &player_points, &level, levels_change);
+                  &shot, &player_life, &player_points, &level, levels_change, difficulty,
+                  &delay_armor, &increasing_life, &missile, &missile_update);
         break;
 
       case 3:
