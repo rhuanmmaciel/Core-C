@@ -53,12 +53,14 @@ void update_color(ALLEGRO_COLOR button_colors[], int i, bool selected){
 }
 
 void updateConstant(float* k, float* r, float i){
+
   *k += i;
   *r += i;
+
 }
 
 void draw_menu(ALLEGRO_FONT* font, float rect_x_pos1, float rect_x_pos2, float rect_y_size,
-               float rect_y_pos1, float rect_y_pos2, float rect_y_pos3, float rect_y_pos4,
+               float rect_y_pos1, float rect_y_pos2, float rect_y_pos3,
                ALLEGRO_COLOR button_colors[]){
 
   float k = 4.0;
@@ -68,23 +70,18 @@ void draw_menu(ALLEGRO_FONT* font, float rect_x_pos1, float rect_x_pos2, float r
   al_draw_rectangle(width * 0.01, height * 0.01, width * 0.99, height * 0.99, al_map_rgb(0,0,0), 5);
 
   al_draw_filled_rectangle(rect_x_pos1, rect_y_pos1, rect_x_pos2, rect_y_pos1 + rect_y_size, button_colors[0]);
-  al_draw_text(font, al_map_rgb(0, 0, 0), 0.5 * width, rect_y_pos1 * k / r, ALLEGRO_ALIGN_CENTRE, "NEW GAME");
+  al_draw_text(font, al_map_rgb(0, 0, 0), 0.5 * width, rect_y_pos1 * k / r, ALLEGRO_ALIGN_CENTRE, "NOVO JOGO");
   al_draw_rectangle(rect_x_pos1, rect_y_pos1, rect_x_pos2, rect_y_pos1 + rect_y_size, al_map_rgb(0,0,0), 2);
-  updateConstant(&k, &r, 4.0);
+  updateConstant(&k, &r, 5.0);
 
   al_draw_filled_rectangle(rect_x_pos1, rect_y_pos2, rect_x_pos2, rect_y_pos2 + rect_y_size, button_colors[1]);
-  al_draw_text(font, al_map_rgb(0, 0, 0), 0.5 * width, rect_y_pos2 * k / r, ALLEGRO_ALIGN_CENTRE, "SETTINGS");
-  al_draw_rectangle(rect_x_pos1, rect_y_pos2, rect_x_pos2, rect_y_pos2 + rect_y_size, al_map_rgb(0,0,0), 2); 
-  updateConstant(&k, &r, 4.0);
+  al_draw_text(font, al_map_rgb(0, 0, 0), 0.5 * width, rect_y_pos2 * k / r, ALLEGRO_ALIGN_CENTRE, "AJUDA");
+  al_draw_rectangle(rect_x_pos1, rect_y_pos2, rect_x_pos2, rect_y_pos2 + rect_y_size, al_map_rgb(0,0,0), 2);  
+  updateConstant(&k, &r, 5.0);
 
   al_draw_filled_rectangle(rect_x_pos1, rect_y_pos3, rect_x_pos2, rect_y_pos3 + rect_y_size, button_colors[2]);
-  al_draw_text(font, al_map_rgb(0, 0, 0), 0.5 * width, rect_y_pos3 * k / r, ALLEGRO_ALIGN_CENTRE, "HELP");
+  al_draw_text(font, al_map_rgb(0, 0, 0), 0.5 * width, rect_y_pos3 * k / r, ALLEGRO_ALIGN_CENTRE, "SAIR");
   al_draw_rectangle(rect_x_pos1, rect_y_pos3, rect_x_pos2, rect_y_pos3 + rect_y_size, al_map_rgb(0,0,0), 2);  
-  updateConstant(&k, &r, 4.0);
-
-  al_draw_filled_rectangle(rect_x_pos1, rect_y_pos4, rect_x_pos2, rect_y_pos4 + rect_y_size, button_colors[3]);
-  al_draw_text(font, al_map_rgb(0, 0, 0), 0.5 * width, rect_y_pos4 * k / r, ALLEGRO_ALIGN_CENTRE, "QUIT");
-  al_draw_rectangle(rect_x_pos1, rect_y_pos4, rect_x_pos2, rect_y_pos4 + rect_y_size, al_map_rgb(0,0,0), 2);  
 
 }
 
@@ -95,9 +92,8 @@ void menu(ALLEGRO_EVENT event, ALLEGRO_EVENT_QUEUE* queue, ALLEGRO_FONT* font,
   float rect_x_pos2 = 0.3 * width + rect_x_pos1;
   float rect_y_size = font_size + height * 0.10;
   float rect_y_pos1 = height * 0.15;
-  float rect_y_pos2 = height * 0.35;
-  float rect_y_pos3 = height * 0.55;
-  float rect_y_pos4 = height * 0.75;
+  float rect_y_pos2 = height * 0.40;
+  float rect_y_pos3 = height * 0.65;
 
   switch (event.type){
 
@@ -117,9 +113,7 @@ void menu(ALLEGRO_EVENT event, ALLEGRO_EVENT_QUEUE* queue, ALLEGRO_FONT* font,
         if(event.mouse.y >= rect_y_pos2 && event.mouse.y <= rect_y_pos2 + rect_y_size)
           *screen = 3;
         if(event.mouse.y >= rect_y_pos3 && event.mouse.y <= rect_y_pos3 + rect_y_size)
-          *screen = 4;
-        if(event.mouse.y >= rect_y_pos4 && event.mouse.y <= rect_y_pos4 + rect_y_size)
-          *screen = 5;                
+          *game = 0;            
 
       }      
       break;
@@ -137,11 +131,7 @@ void menu(ALLEGRO_EVENT event, ALLEGRO_EVENT_QUEUE* queue, ALLEGRO_FONT* font,
       if(event.mouse.x >= rect_x_pos1 && event.mouse.x <= rect_x_pos2 &&
          event.mouse.y >= rect_y_pos3 && event.mouse.y <= rect_y_pos3 + rect_y_size)
         update_color(button_colors, 2, true);
-      else update_color(button_colors, 2, false);      
-      if(event.mouse.x >= rect_x_pos1 && event.mouse.x <= rect_x_pos2 &&
-         event.mouse.y >= rect_y_pos4 && event.mouse.y <= rect_y_pos4 + rect_y_size)
-        update_color(button_colors, 3, true);                                                   
-      else update_color(button_colors, 3, false);        
+      else update_color(button_colors, 2, false);            
       break; 
         
    }
@@ -150,7 +140,7 @@ void menu(ALLEGRO_EVENT event, ALLEGRO_EVENT_QUEUE* queue, ALLEGRO_FONT* font,
 
     al_clear_to_color(al_map_rgb(0, 0, 100));
     draw_menu(font, rect_x_pos1, rect_x_pos2, rect_y_size, rect_y_pos1,
-              rect_y_pos2, rect_y_pos3, rect_y_pos4, button_colors);
+              rect_y_pos2, rect_y_pos3, button_colors);
     al_flip_display();
 
     *redraw = false;
@@ -158,8 +148,87 @@ void menu(ALLEGRO_EVENT event, ALLEGRO_EVENT_QUEUE* queue, ALLEGRO_FONT* font,
 
 }
 
+void draw_help(ALLEGRO_FONT* font, float backbutton_x_1, float backbutton_x_2, float backbutton_y_1, float backbutton_y_2, ALLEGRO_COLOR button_colors[]){
+
+  al_draw_filled_rectangle(0, 0, width, height, al_map_rgb(215, 188, 134));
+  al_draw_rectangle(width * 0.01, height * 0.01, width * 0.99, height * 0.99, al_map_rgb(0,0,0), 5);
+
+  al_draw_filled_rectangle(backbutton_x_1, backbutton_y_1, backbutton_x_2, backbutton_y_2, button_colors[7]);  
+  al_draw_rectangle(backbutton_x_1, backbutton_y_1, backbutton_x_2, backbutton_y_2, al_map_rgb(0, 0, 0), 2);
+  al_draw_filled_rectangle(backbutton_x_1 + width * 0.02, backbutton_y_1 + 0.02 * height,
+                           backbutton_x_2 - width * 0.01, backbutton_y_2 - height * 0.02, al_map_rgb(0, 0, 0));
+  al_draw_filled_triangle(backbutton_x_1 + width * 0.005, backbutton_y_1 + height * 0.025,
+                          backbutton_x_1 + width * 0.02, backbutton_y_1 + height * 0.01,
+                          backbutton_x_1 + width * 0.02, backbutton_y_2 - height * 0.01,
+                          al_map_rgb(0, 0, 0));
+
+  al_draw_filled_rectangle(width * 0.10, height * 0.15, width * 0.90, height * 0.85, al_map_rgb(255, 255, 255));
+  al_draw_rectangle(width * 0.10, height * 0.15, width * 0.90, height * 0.85, al_map_rgb(0, 0, 0), 1);
+
+  const char * text = "JOGABILIDADE: o personagem central deve capturar seus aliados que possuem cor azul para aumentar de tamanho, "
+                      "enquanto precisa defender-se de seus inimigos que estão em vermelho, para isso utilizando seu escudo ou atirando com o canhão.\n\n"
+                      "OBJETIVO: atingir o tamanho de seu escudo antes de perder todas suas vidas.\n\n"
+                      "CANHÃO: o player pode atirar a cada 1 segundo, entretanto não pode haver mais que um tiro na tela.\n\n"
+                      "MÍSSIL: cada vez que o player atingir 50 pontos será dado um tiro especial, o qual some quando atingir a parede 5 vezes"
+                      " ou colidir com 3 inimigos. Será sinalizado com a mudança de cor do canhão quando essa habilidade estiver disponível. Se o aliado for atingido"
+                      ", todas os inimigos diminuirão em 25 por cento sua velocidade por 5 segundos.\n\n"
+                      "ARMADURA: a armadura é habilitada a cada nível múltiplo de 3 quando o player pressionar a tecla espaço. E será notificado com um "
+                      "símbolo de escudo na parte superior da tela. Quando ativada, a habilidade durará de 5 a 10 segundos. A partir do momento em que"
+                      " a tecla espaço for soltada, a armadura retrairá e não será possível utilizá-la até a próxima fase múltipla de 3. "
+                      "No momento que estiver ativa, protegerá contra todas as entidades que a encostarem, porém o player diminuirá de tamanho constantemente."
+                      " Também só poderá ser acionada se o player tiver um mínimo de tamanho, e uma vez que chegue ao limite enquanto acionada a armadura,"
+                      " ela sumirá automaticamente.\n\n"
+                      "PAUSE: o jogador poderá pausar o jogo uma vez a cada fase, e essa opção torna-se possível sempre que aumentar de nível.\n\n"
+                      "PONTOS: cada inimigo destruído pelo escudo = 1 ponto, pelo canhão = 2 pontos, pela armadura = 3 pontos e pelo míssil = 5 pontos.\n\n"
+                      "NÍVEIS: o próximo nível sempre precisará de mais pontos que o anterior, sendo mostrado na tela quantos pontos necessários para atingí-lo.\n\n";
+
+  al_draw_multiline_text(font, al_map_rgb(0, 0, 0), width * 0.105, height * 0.17, width * 0.79, 0.02 * height, ALLEGRO_ALIGN_LEFT, text);
+
+}
+
+void help(ALLEGRO_EVENT event, ALLEGRO_EVENT_QUEUE* queue, ALLEGRO_KEYBOARD_STATE keyboard,
+                    ALLEGRO_FONT* font, ALLEGRO_TIMER* timer, bool* game, bool* redraw, int* screen,
+                    ALLEGRO_COLOR button_colors[], float backbutton_x_1, float backbutton_x_2, float backbutton_y_1, float backbutton_y_2){
+
+  switch (event.type){
+
+    case ALLEGRO_EVENT_TIMER:
+      *redraw = true;
+      break;
+
+    case ALLEGRO_EVENT_DISPLAY_CLOSE:
+      *game = false;
+      break;
+
+    case ALLEGRO_EVENT_MOUSE_BUTTON_DOWN:
+      if(event.mouse.x >= backbutton_x_1 && event.mouse.x <= backbutton_x_2
+         && event.mouse.y >= backbutton_y_1 && event.mouse.y <= backbutton_y_2)
+        *screen = 0;      
+      break;
+
+    case ALLEGRO_EVENT_MOUSE_AXES:
+      if(event.mouse.x >= backbutton_x_1 && event.mouse.x <= backbutton_x_2
+         && event.mouse.y >= backbutton_y_1 && event.mouse.y <= backbutton_y_2)
+        update_color(button_colors, 7, true);
+      else update_color(button_colors, 7, false);      
+      break;  
+  
+   }
+
+  if(*redraw && al_is_event_queue_empty(queue) && *screen == 3){
+
+    al_clear_to_color(al_map_rgb(0, 0, 100));
+    draw_help(font, backbutton_x_1, backbutton_x_2, backbutton_y_1, backbutton_y_2, button_colors);
+    al_flip_display();
+
+    *redraw = false;
+  } 
+
+}
+
 void draw_difficulty(ALLEGRO_FONT* font, float rect_x_pos1, float rect_x_pos2, float rect_y_size,
-                     float rect_y_pos1, float rect_y_pos2, float rect_y_pos3, ALLEGRO_COLOR button_colors[]){
+                     float rect_y_pos1, float rect_y_pos2, float rect_y_pos3, ALLEGRO_COLOR button_colors[],
+                     float backbutton_x_1, float backbutton_x_2, float backbutton_y_1, float backbutton_y_2){
 
   float k = 9.0;
   float r = 7.0;
@@ -179,13 +248,22 @@ void draw_difficulty(ALLEGRO_FONT* font, float rect_x_pos1, float rect_x_pos2, f
 
   al_draw_filled_rectangle(rect_x_pos1, rect_y_pos3, rect_x_pos2, rect_y_pos3 + rect_y_size, button_colors[6]);
   al_draw_text(font, al_map_rgb(0, 0, 0), 0.5 * width, rect_y_pos3 * k / r, ALLEGRO_ALIGN_CENTRE, "HARD");
-  al_draw_rectangle(rect_x_pos1, rect_y_pos3, rect_x_pos2, rect_y_pos3 + rect_y_size, al_map_rgb(0, 0, 0), 2);  
+  al_draw_rectangle(rect_x_pos1, rect_y_pos3, rect_x_pos2, rect_y_pos3 + rect_y_size, al_map_rgb(0, 0, 0), 2); 
+
+  al_draw_filled_rectangle(backbutton_x_1, backbutton_y_1, backbutton_x_2, backbutton_y_2, button_colors[7]);
+  al_draw_rectangle(backbutton_x_1, backbutton_y_1, backbutton_x_2, backbutton_y_2, al_map_rgb(0, 0, 0), 2);
+  al_draw_filled_rectangle(backbutton_x_1 + width * 0.02, backbutton_y_1 + 0.02 * height,
+                           backbutton_x_2 - width * 0.01, backbutton_y_2 - height * 0.02, al_map_rgb(0, 0, 0));
+  al_draw_filled_triangle(backbutton_x_1 + width * 0.005, backbutton_y_1 + height * 0.025,
+                          backbutton_x_1 + width * 0.02, backbutton_y_1 + height * 0.01,
+                          backbutton_x_1 + width * 0.02, backbutton_y_2 - height * 0.01,
+                          al_map_rgb(0, 0, 0)); 
 
 }
 
 void set_difficulty(ALLEGRO_EVENT event, ALLEGRO_EVENT_QUEUE* queue, ALLEGRO_KEYBOARD_STATE keyboard,
                     ALLEGRO_FONT* font, ALLEGRO_TIMER* timer, bool* game, bool* redraw, int* screen,
-                    int* difficulty, ALLEGRO_COLOR button_colors[]){
+                    int* difficulty, ALLEGRO_COLOR button_colors[], float backbutton_x_1, float backbutton_x_2, float backbutton_y_1, float backbutton_y_2){
 
   float rect_x_pos1 = width * 0.40;
   float rect_x_pos2 = width * 0.60;
@@ -205,6 +283,7 @@ void set_difficulty(ALLEGRO_EVENT event, ALLEGRO_EVENT_QUEUE* queue, ALLEGRO_KEY
       break;
 
     case ALLEGRO_EVENT_MOUSE_BUTTON_DOWN:
+
       if(event.mouse.x >= rect_x_pos1 && event.mouse.x <= rect_x_pos2){
 
         if(event.mouse.y >= rect_y_pos1 && event.mouse.y <= rect_y_pos1 + rect_y_size)
@@ -214,7 +293,12 @@ void set_difficulty(ALLEGRO_EVENT event, ALLEGRO_EVENT_QUEUE* queue, ALLEGRO_KEY
         if(event.mouse.y >= rect_y_pos3 && event.mouse.y <= rect_y_pos3 + rect_y_size)
           *difficulty = 3;               
 
-      }      
+      }
+
+      if(event.mouse.x >= backbutton_x_1 && event.mouse.x <= backbutton_x_2
+         && event.mouse.y >= backbutton_y_1 && event.mouse.y <= backbutton_y_2)
+        *screen = 0;  
+
       break;
 
     case ALLEGRO_EVENT_MOUSE_AXES:
@@ -230,7 +314,11 @@ void set_difficulty(ALLEGRO_EVENT event, ALLEGRO_EVENT_QUEUE* queue, ALLEGRO_KEY
       if(event.mouse.x >= rect_x_pos1 && event.mouse.x <= rect_x_pos2 &&
          event.mouse.y >= rect_y_pos3 && event.mouse.y <= rect_y_pos3 + rect_y_size)
         update_color(button_colors, 6, true);
-      else update_color(button_colors, 6, false);             
+      else update_color(button_colors, 6, false);
+      if(event.mouse.x >= backbutton_x_1 && event.mouse.x <= backbutton_x_2
+         && event.mouse.y >= backbutton_y_1 && event.mouse.y <= backbutton_y_2)
+        update_color(button_colors, 7, true);
+      else update_color(button_colors, 7, false);                 
       break;     
    }
 
@@ -242,11 +330,26 @@ void set_difficulty(ALLEGRO_EVENT event, ALLEGRO_EVENT_QUEUE* queue, ALLEGRO_KEY
     al_clear_to_color(al_map_rgb(0, 0, 100));
     draw_difficulty(font, rect_x_pos1, rect_x_pos2,
                     rect_y_size, rect_y_pos1,
-                    rect_y_pos2, rect_y_pos3, button_colors);
+                    rect_y_pos2, rect_y_pos3, button_colors,
+                    backbutton_x_1, backbutton_x_2, backbutton_y_1, backbutton_y_2);
     al_flip_display();
 
     *redraw = false;
   } 
+
+}
+
+void victory(ALLEGRO_FONT* font){
+
+  al_draw_filled_rectangle(0, 0, width, height, al_map_rgb(215, 188, 134));
+  al_draw_rectangle(width * 0.01, height * 0.01, width * 0.99, height * 0.99, al_map_rgb(0, 0, 0), 5);
+
+}
+
+void game_over(){
+
+  al_draw_filled_rectangle(0, 0, width, height, al_map_rgb(215, 188, 134));
+  al_draw_rectangle(width * 0.01, height * 0.01, width * 0.99, height * 0.99, al_map_rgb(0, 0, 0), 5);
 
 }
 
@@ -458,22 +561,24 @@ void enemy_generation(struct enemy enemies[], int* index_enemies, int* max_enemi
 
     }
 
-    float speed_max = difficulty + 7 * level / 2;
-    float speed_min = difficulty + 2 * level / 2;
+    float angle_direction_x = (float)(rand() % 20) - 10;
+    float angle_direction_y = (float)(rand() % 20) - 10;
 
-    float speed = (rand() % (int) ceil(speed_max - speed_min) + speed_min) / 1000;
+    float speed_max = 3 * difficulty + 10 + level;
+    float speed_min = 3 * difficulty + 2 + level;
 
+    float speed = (float)((rand() % (int) (speed_max - speed_min)) + speed_min) / 3000;
 
-    float x_velocity = axes[0] ? abs(enemies[*index_enemies].pos_x - half_width) * speed:
-                                 -abs(enemies[*index_enemies].pos_x - half_width) * speed;
+    float x_velocity = axes[0] ? abs(enemies[*index_enemies].pos_x - half_width + angle_direction_x) * speed :
+                                 -abs(enemies[*index_enemies].pos_x - half_width + angle_direction_x) * speed ;
 
-    float y_velocity = axes[1] ? abs(enemies[*index_enemies].pos_y - half_height) * speed:
-                                 -abs(enemies[*index_enemies].pos_y - half_height) * speed;
+    float y_velocity = axes[1] ? abs(enemies[*index_enemies].pos_y - half_height + angle_direction_y) * speed :
+                                 -abs(enemies[*index_enemies].pos_y - half_height + angle_direction_y) * speed;
 
     enemies[*index_enemies].vel_pos_x = x_velocity;
     enemies[*index_enemies].vel_pos_y = y_velocity;
 
-    enemies[*index_enemies].radius = rand() % 5 + 4;
+    enemies[*index_enemies].radius = rand() % 5 + 3;
 
     enemies[*index_enemies].alive = true;
 
@@ -589,9 +694,8 @@ void enemy_logic(ALLEGRO_TIMER* timer, struct enemy enemies[], int* index_enemie
                  int* player_points, bool armor, float shrinking_armor, bool armor_started, int level, int difficulty, bool* ally_hitted_missile,
                  float* delay_5s){
 
-  int spawn_rate = 50 - level * 2 > 0 ? 50 - level * 2 : 1;
-
-  if(al_get_timer_count(timer) % spawn_rate == 0) enemy_generation(enemies, index_enemies, max_enemies, level, difficulty);
+  int spawn_rate =  level >= 49 ? 2 : (50 - level);
+  if(rand() % spawn_rate == 0) enemy_generation(enemies, index_enemies, max_enemies, level, difficulty);
 
   for(int i = 0; i < *max_enemies; i++){
  
@@ -610,7 +714,6 @@ void enemy_logic(ALLEGRO_TIMER* timer, struct enemy enemies[], int* index_enemie
   if(*ally_hitted_missile && *delay_5s == 0)
     *delay_5s = ALLEGRO_MSECS_TO_SECS(al_get_timer_count(timer) * 10);
 
-
   if(*delay_5s + 5 <= ALLEGRO_MSECS_TO_SECS(al_get_timer_count(timer) * 10) && *ally_hitted_missile){
 
     *ally_hitted_missile = false;
@@ -623,13 +726,11 @@ void enemy_logic(ALLEGRO_TIMER* timer, struct enemy enemies[], int* index_enemie
 void game_background(ALLEGRO_FONT* font, ALLEGRO_TIMER* timer, float player_radius, float player_shield_radius, float* shield,
                      float* mouse_pos_x, float* mouse_pos_y, float gun_size, int* player_life, int* player_points, bool armor,
                      bool armor_available, float delay_armor, float random_seconds_5_10, bool* armor_started, float* shrinking_armor,
-                     int* level,
-                     int levels_change[], bool missile, bool shot_fired){
+                     int level, int levels_change[], bool level_updated, int* duration_level_up, bool missile, bool shot_fired){
 
   *shield = M_PI / 2 + atan(*mouse_pos_y / *mouse_pos_x);
   *shield += *mouse_pos_x >= 0 ? M_PI : 0;
 
-  bool pause = false;
   float player_shield_armor = player_shield_radius - *shrinking_armor;
 
   float gun_point_1_x = (player_radius + gun_size) * (-cos(*shield + M_PI / 2)) + half_width;
@@ -641,8 +742,8 @@ void game_background(ALLEGRO_FONT* font, ALLEGRO_TIMER* timer, float player_radi
   float gun_point_3_x = player_radius * (-cos(*shield - 5 + M_PI / 2)) + half_width;
   float gun_point_3_y = player_radius * (-sin(*shield - 5 + M_PI / 2)) + half_height;
 
-  int criteria = 50 + *level * 10;
-  levels_change[*level] = criteria + levels_change[*level - 1] + 10 * (*level - 1);
+  int criteria = 50 + level * 10;
+  levels_change[level] = criteria + levels_change[level - 1] + 10 * (level - 1);
 
   ALLEGRO_COLOR gun_color = missile && !shot_fired ? al_map_rgb(0, 255, 255) : al_map_rgb(0, 123, 123);
 
@@ -673,7 +774,7 @@ void game_background(ALLEGRO_FONT* font, ALLEGRO_TIMER* timer, float player_radi
 
   al_draw_textf(font, al_map_rgb(255, 255, 255), width * 0.5, 0, ALLEGRO_ALIGN_CENTRE, "%d pts", *player_points);
 
-  al_draw_textf(font, al_map_rgb(255, 255, 255), width * 0.99, 0, ALLEGRO_ALIGN_RIGHT, "(Próximo %d pts) Nível: %d", levels_change[*level], *level);
+  al_draw_textf(font, al_map_rgb(255, 255, 255), width * 0.99, 0, ALLEGRO_ALIGN_RIGHT, "(Próximo %d pts) Nível: %d", levels_change[level], level);
 
   al_draw_textf(font, al_map_rgb(255, 255, 255), width * 0.70, 0, ALLEGRO_ALIGN_RIGHT, "Pause: %f", player_radius);
 
@@ -696,11 +797,8 @@ void game_background(ALLEGRO_FONT* font, ALLEGRO_TIMER* timer, float player_radi
   }
 
   if(*armor_started && (delay_armor + random_seconds_5_10 < ALLEGRO_MSECS_TO_SECS(al_get_timer_count(timer) * 10))
-                        || player_radius < width / height * 10){
-
+                        || player_radius < width / height * 10)
     *shrinking_armor += 0.1;
-
-  }
 
   if(player_shield_radius - *shrinking_armor < player_radius){
 
@@ -709,6 +807,12 @@ void game_background(ALLEGRO_FONT* font, ALLEGRO_TIMER* timer, float player_radi
 
   }
 
+  if(level_updated)
+    *duration_level_up = ALLEGRO_MSECS_TO_SECS(al_get_timer_count(timer) * 10);
+
+  if(*duration_level_up + 2 > ALLEGRO_MSECS_TO_SECS(al_get_timer_count(timer) * 10) && level != 1)
+    al_draw_text(font, al_map_rgb(102, 204, 255), half_width, height * 0.3, ALLEGRO_ALIGN_CENTRE, "LEVEL UP");
+  else *duration_level_up = 0;
 
   al_destroy_bitmap(background);
 
@@ -719,13 +823,15 @@ void play_game(ALLEGRO_EVENT event, ALLEGRO_EVENT_QUEUE* queue, ALLEGRO_KEYBOARD
                float* player_radius, float player_shield_radius, float* shield, float* mouse_pos_x, 
                float* mouse_pos_y, struct enemy enemies[], int* index_enemies, int* max_enemies,
                float gun_size, float* delay_1s, struct shot_properties* shot, int* player_life,
-               int* player_points, int* level, int levels_change[], bool* level_updated, int difficulty,
-               float* delay_armor, float* random_seconds_5_10, bool* armor_started, float* shrinking_armor,
+               int* player_points, int* level, int levels_change[], bool* level_updated, int* duration_level_up, int difficulty,
+               float* delay_armor, float* random_seconds_5_10, bool* armor_first_use, bool* armor_started, float* shrinking_armor,
                bool* increasing_life, bool* missile,
-               int* missile_update, bool* ally_hitted_missile, float* delay_5s){
+               int* missile_update, bool* ally_hitted_missile, float* delay_5s, bool* pause_available, bool* pause){
 
   bool shot_fired = false;
   bool armor = false;
+
+  al_get_keyboard_state(&keyboard);
 
   switch (event.type){
 
@@ -742,17 +848,37 @@ void play_game(ALLEGRO_EVENT event, ALLEGRO_EVENT_QUEUE* queue, ALLEGRO_KEYBOARD
       *mouse_pos_y = event.mouse.y - half_height; 
       break;
 
+    case ALLEGRO_EVENT_KEY_DOWN:
+      if(al_key_down(&keyboard, ALLEGRO_KEY_ESCAPE) && *pause_available){
+        al_stop_timer(timer);
+        *pause = true;
+      }
+      break;  
+
   }
 
-  if(*level_updated) *delay_armor = 0;
+  if(*level_updated){
+   
+    *delay_armor = 0;
+    *pause_available = true;
 
-  al_get_keyboard_state(&keyboard);
-  if(*level % 3 == 0 && al_key_down(&keyboard, ALLEGRO_KEY_SPACE) && *player_radius > width / height * 10)
+  }
+    
+  if(*level % 3 == 0 && al_key_down(&keyboard, ALLEGRO_KEY_SPACE) && *player_radius > width / height * 10 && *delay_armor >= 0){
+
       armor_logic(timer, &armor, player_radius, delay_armor, random_seconds_5_10);
-  
+      *armor_first_use = true;
+
+  }else if(*armor_first_use){
+
+    *delay_armor = -10;
+    *armor_first_use = false;
+
+  }
+
   bool armor_available = armor || (*level % 3 == 0 && *delay_armor == 0) ||
                          (*delay_armor + *random_seconds_5_10 > ALLEGRO_MSECS_TO_SECS(al_get_timer_count(timer) * 10)
-                           && *delay_armor != 0);
+                           && *delay_armor != 0 && *armor_first_use);
 
   if(al_key_down(&keyboard, ALLEGRO_KEY_Z))
     *player_points += 1;
@@ -763,7 +889,7 @@ void play_game(ALLEGRO_EVENT event, ALLEGRO_EVENT_QUEUE* queue, ALLEGRO_KEYBOARD
     game_background(font, timer, *player_radius, player_shield_radius, shield,
                     mouse_pos_x, mouse_pos_y, gun_size, player_life, player_points,
                     armor, armor_available, *delay_armor, *random_seconds_5_10, armor_started, shrinking_armor,
-                    level, levels_change, *missile,
+                    *level, levels_change, *level_updated, duration_level_up, *missile,
                     shot_fired);
     enemy_logic(timer, enemies, index_enemies, max_enemies,
                 mouse_pos_x, mouse_pos_y, shield, player_radius,
@@ -790,7 +916,39 @@ void play_game(ALLEGRO_EVENT event, ALLEGRO_EVENT_QUEUE* queue, ALLEGRO_KEYBOARD
     al_flip_display();
 
     *redraw = false;
-  }  
+
+  }
+
+  if(!*redraw && al_is_event_queue_empty(queue) && *pause) {
+
+    al_draw_filled_rectangle(0.25 * width, 0.25 * height, 0.75 * width, 0.75 * height, al_map_rgb(215, 188, 134));
+    al_draw_rectangle(0.25 * width, 0.25 * height, 0.75 * width, 0.75 * height, al_map_rgb(0, 0, 0), 3);
+
+    al_draw_text(font, al_map_rgb(0, 0, 0), half_width, height * 0.375, ALLEGRO_ALIGN_CENTRE, "VOLTAR AO JOGO");
+    al_draw_text(font, al_map_rgb(0, 0, 0), half_width, height * 0.575, ALLEGRO_ALIGN_CENTRE, "SAIR DO JOGO");
+    al_draw_rectangle(0.4 * width, 0.35 * height, 0.6 * width, 0.45 * height, al_map_rgb(0, 0, 0), 2);
+    al_draw_rectangle(0.4 * width, 0.55 * height, 0.6 * width, 0.65 * height, al_map_rgb(0, 0, 0), 2);    
+
+
+    ALLEGRO_MOUSE_STATE state;
+    al_get_mouse_state(&state);
+    if (state.buttons & 1 && *mouse_pos_x > 0.4 * width - half_width &&
+        *mouse_pos_x < 0.6 * width - half_width){
+
+      if(*mouse_pos_y > 0.35 * height - half_height && *mouse_pos_y < 0.45 * height - half_height){
+        al_resume_timer(timer);
+        *pause_available = false;
+        *pause = false;
+      }
+
+      if(*mouse_pos_y > 0.55 * height - half_height && *mouse_pos_y < 0.65 * height - half_height)
+        *game = false;
+    }
+
+    al_flip_display();
+
+  }
+
 }
 
 int main(){
@@ -812,14 +970,24 @@ int main(){
   ALLEGRO_FONT* game_font = al_load_font("game_font.ttf", font_size / 3, 0);
   must_init(game_font, "game_font");
 
+  ALLEGRO_FONT* help_font = al_load_font("help_font.ttf", font_size / 3, 0);
+  must_init(help_font, "help_font");
+
   ALLEGRO_EVENT event;
   ALLEGRO_KEYBOARD_STATE keyboard;
 
   event_register(queue, display, timer);
 
+  float backbutton_x_1 = width * 0.05;
+  float backbutton_x_2 = width * 0.10;
+  float backbutton_y_1 = height * 0.05;
+  float backbutton_y_2 = height * 0.10;
+
   bool game = true, redraw = true;
   int screen = 0;
   ALLEGRO_COLOR button_colors[10];
+  for(int i = 0; i < 10; i++)
+    button_colors[i] = al_map_rgb(215, 188, 134);
 
   
   float player_shield_radius = width / height * 60;
@@ -850,11 +1018,16 @@ int main(){
   levels_change[0] = 0;
   bool level_updated = false;
   bool increasing_life = false;
+  int duration_level_up = 0;
 
   float delay_armor = 0;
   float random_seconds_5_10;
   bool armor_started = false;
   float shrinking_armor = 0;
+  bool armor_first_use = false;
+
+  bool pause_available = true;
+  bool pause = false;
 
   time_t t;
   srand(time(&t));
@@ -875,7 +1048,7 @@ int main(){
       case 1:
         
         set_difficulty(event, queue, keyboard, font, timer, &game, &redraw, &screen,
-                       &difficulty, button_colors);
+                       &difficulty, button_colors, backbutton_x_1, backbutton_x_2, backbutton_y_1, backbutton_y_2);
         break;  
 
       case 2: 
@@ -884,27 +1057,27 @@ int main(){
                   &screen, &player_radius, player_shield_radius, &shield, &mouse_pos_x,
                   &mouse_pos_y, enemies, &index_enemies, &max_enemies, gun_size, &delay_1s,
                   &shot, &player_life, &player_points, &level, levels_change, &level_updated,
-                  difficulty, &delay_armor, &random_seconds_5_10, &armor_started, &shrinking_armor,
-                  &increasing_life, &missile,
-                  &missile_update, &ally_hitted_missile, &delay_5s);
+                  &duration_level_up, difficulty, &delay_armor, &random_seconds_5_10, &armor_first_use, &armor_started, &shrinking_armor,
+                  &increasing_life, &missile, &missile_update, &ally_hitted_missile, &delay_5s, &pause_available, &pause);
         break;
 
       case 3:
 
-        game = false;
+        help(event, queue, keyboard, help_font, timer, &game, &redraw, &screen,
+             button_colors, backbutton_x_1, backbutton_x_2, backbutton_y_1, backbutton_y_2);
         break;
 
       case 4:
 
-        game = false;
+        victory(font);
         break;
 
       case 5:
+        
+        game_over();
+        break;  
+    }
 
-        game = false;
-        break;        
-
-      } 
   }
 
   al_destroy_font(font);
@@ -913,4 +1086,5 @@ int main(){
   al_destroy_event_queue(queue);
 
   return 0;
+
 }
