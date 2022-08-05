@@ -9,8 +9,6 @@
 #include <allegro5/allegro_image.h>
 #include <allegro5/allegro_primitives.h>
 
-//gcc t.c $(pkg-config allegro-5 allegro_font-5 allegro_ttf-5 allegro_image-5 allegro_primitives-5 --libs --cflags) -lm
-
 const int width = 1200;
 const int height = 640;
 const int half_width = width / 2;
@@ -148,7 +146,8 @@ void menu(ALLEGRO_EVENT event, ALLEGRO_EVENT_QUEUE* queue, ALLEGRO_FONT* font,
 
 }
 
-void draw_help(ALLEGRO_FONT* font, float backbutton_x_1, float backbutton_x_2, float backbutton_y_1, float backbutton_y_2, ALLEGRO_COLOR button_colors[]){
+void draw_help(ALLEGRO_FONT* font, float backbutton_x_1, float backbutton_x_2, float backbutton_y_1,
+               float backbutton_y_2, ALLEGRO_COLOR button_colors[]){
 
   al_draw_filled_rectangle(0, 0, width, height, al_map_rgb(215, 188, 134));
   al_draw_rectangle(width * 0.01, height * 0.01, width * 0.99, height * 0.99, al_map_rgb(0,0,0), 5);
@@ -178,7 +177,8 @@ void draw_help(ALLEGRO_FONT* font, float backbutton_x_1, float backbutton_x_2, f
                       "No momento que estiver ativa, protegerá contra todas as entidades que a encostarem, porém o player diminuirá de tamanho constantemente."
                       " Também só poderá ser acionada se o player tiver um mínimo de tamanho, e uma vez que chegue ao limite enquanto acionada a armadura,"
                       " ela sumirá automaticamente.\n\n"
-                      "PAUSE: o jogador poderá pausar o jogo uma vez a cada fase, e essa opção torna-se possível sempre que aumentar de nível.\n\n"
+                      "PAUSE: o jogador poderá pausar o jogo uma vez a cada fase, e essa opção torna-se possível sempre que aumentar de nível. Aparecerá um ícone na"
+                      " parte superior do jogo quando o pause estiver disponível.\n\n"
                       "PONTOS: cada inimigo destruído pelo escudo = 1 ponto, pelo canhão = 2 pontos, pela armadura = 3 pontos e pelo míssil = 5 pontos.\n\n"
                       "NÍVEIS: o próximo nível sempre precisará de mais pontos que o anterior, sendo mostrado na tela quantos pontos necessários para atingí-lo.\n\n";
 
@@ -263,7 +263,8 @@ void draw_difficulty(ALLEGRO_FONT* font, float rect_x_pos1, float rect_x_pos2, f
 
 void set_difficulty(ALLEGRO_EVENT event, ALLEGRO_EVENT_QUEUE* queue, ALLEGRO_KEYBOARD_STATE keyboard,
                     ALLEGRO_FONT* font, ALLEGRO_TIMER* timer, bool* game, bool* redraw, int* screen,
-                    int* difficulty, ALLEGRO_COLOR button_colors[], float backbutton_x_1, float backbutton_x_2, float backbutton_y_1, float backbutton_y_2){
+                    int* difficulty, ALLEGRO_COLOR button_colors[], float backbutton_x_1, float backbutton_x_2,
+                    float backbutton_y_1, float backbutton_y_2){
 
   float rect_x_pos1 = width * 0.40;
   float rect_x_pos2 = width * 0.60;
@@ -339,17 +340,85 @@ void set_difficulty(ALLEGRO_EVENT event, ALLEGRO_EVENT_QUEUE* queue, ALLEGRO_KEY
 
 }
 
-void victory(ALLEGRO_FONT* font){
+void victory(ALLEGRO_FONT* font, bool* game){
 
   al_draw_filled_rectangle(0, 0, width, height, al_map_rgb(215, 188, 134));
   al_draw_rectangle(width * 0.01, height * 0.01, width * 0.99, height * 0.99, al_map_rgb(0, 0, 0), 5);
+  al_draw_text(font, al_map_rgb(0, 0, 0), half_width, half_height, ALLEGRO_ALIGN_CENTRE, "PARABENS, VOCE VENCEU!!!");
+  al_flip_display();
+
+  al_rest(3);
+  *game = false;
 
 }
 
-void game_over(){
+void game_over(ALLEGRO_EVENT event, ALLEGRO_EVENT_QUEUE* queue, ALLEGRO_KEYBOARD_STATE keyboard,
+               ALLEGRO_FONT* font, ALLEGRO_TIMER* timer, bool* game, bool* redraw, int* screen,
+               ALLEGRO_COLOR button_colors[], ALLEGRO_FONT* game_over_font, int player_points,
+               float* final_timer){
 
-  al_draw_filled_rectangle(0, 0, width, height, al_map_rgb(215, 188, 134));
-  al_draw_rectangle(width * 0.01, height * 0.01, width * 0.99, height * 0.99, al_map_rgb(0, 0, 0), 5);
+   switch (event.type){
+
+    case ALLEGRO_EVENT_TIMER:
+      *redraw = true;
+      break;
+
+    case ALLEGRO_EVENT_DISPLAY_CLOSE:
+      *game = false;
+      break;
+
+    case ALLEGRO_EVENT_MOUSE_BUTTON_DOWN:
+
+      if(event.mouse.x >= 0.4 * width && event.mouse.x <= 0.6 * width){
+
+        if(event.mouse.y >= 0.35 * height && event.mouse.y <= 0.45 * height)
+          *screen = 2;      
+        if(event.mouse.y >= 0.55 * height && event.mouse.y <= 0.65 * height)
+          *game = 0;
+
+      }
+      break;
+
+    case ALLEGRO_EVENT_MOUSE_AXES:
+
+      if(event.mouse.x >= 0.4 * width && event.mouse.x <= 0.6 * width){
+
+        if(event.mouse.y >= 0.35 * height && event.mouse.y <= 0.45 * height)
+          update_color(button_colors, 8, true);
+        else update_color(button_colors, 8, false);
+
+        if(event.mouse.y >= 0.55 * height && event.mouse.y <= 0.65 * height)
+          update_color(button_colors, 9, true);
+        else update_color(button_colors, 9, false);  
+
+      } 
+
+      break;  
+  
+   }
+
+  if(*redraw && al_is_event_queue_empty(queue) && *screen == 5){
+
+    al_clear_to_color(al_map_rgb(0, 0, 100));
+    al_draw_filled_rectangle(0, 0, width, height, al_map_rgb(215, 188, 134));
+    al_draw_rectangle(width * 0.01, height * 0.01, width * 0.99, height * 0.99, al_map_rgb(0, 0, 0), 5);
+
+    al_draw_text(game_over_font, al_map_rgb(0, 0, 0), half_width, 0.1 * height, ALLEGRO_ALIGN_CENTRE, "GAME OVER");
+
+    al_draw_filled_rectangle(0.4 * width, 0.35 * height, 0.6 * width, 0.45 * height, button_colors[8]);
+    al_draw_filled_rectangle(0.4 * width, 0.55 * height, 0.6 * width, 0.65 * height, button_colors[9]);       
+    al_draw_rectangle(0.4 * width, 0.35 * height, 0.6 * width, 0.45 * height, al_map_rgb(0, 0, 0), 2);
+    al_draw_rectangle(0.4 * width, 0.55 * height, 0.6 * width, 0.65 * height, al_map_rgb(0, 0, 0), 2); 
+    al_draw_text(font, al_map_rgb(0, 0, 0), half_width, height * 0.375, ALLEGRO_ALIGN_CENTRE, "JOGAR NOVAMENTE");
+    al_draw_text(font, al_map_rgb(0, 0, 0), half_width, height * 0.575, ALLEGRO_ALIGN_CENTRE, "SAIR DO JOGO"); 
+
+    al_draw_textf(font, al_map_rgb(0, 0, 0), half_width, height * 0.85, ALLEGRO_ALIGN_CENTRE, "PONTUAÇÃO: %d", player_points);
+    al_draw_textf(font, al_map_rgb(0, 0, 0), half_width, height * 0.90, ALLEGRO_ALIGN_CENTRE, "TEMPO: %.2f SEGUNDOS", *final_timer);              
+
+    al_flip_display();
+
+    *redraw = false;
+  } 
 
 }
 
@@ -454,7 +523,7 @@ void shots_generation(struct shot_properties* shot, float* shield, float gun_siz
   shot->x_velocity = shot->pos_x - half_width;
   shot->y_velocity = shot->pos_y - half_height;
 
-  shot->color = al_map_rgb(255, 0, 0);
+  shot->color = missile ? al_map_rgb(0, 34, 102) : al_map_rgb(51, 119, 255);
   shot->alive = true;
 
   shot->missile = missile;
@@ -561,8 +630,8 @@ void enemy_generation(struct enemy enemies[], int* index_enemies, int* max_enemi
 
     }
 
-    float angle_direction_x = (float)(rand() % 20) - 10;
-    float angle_direction_y = (float)(rand() % 20) - 10;
+    float angle_direction_x = (float)(rand() % 40) - 20;
+    float angle_direction_y = (float)(rand() % 40) - 20;
 
     float speed_max = 3 * difficulty + 10 + level;
     float speed_min = 3 * difficulty + 2 + level;
@@ -603,7 +672,8 @@ void movement_update(struct enemy enemies[], int i, bool ally_hitted_missile){
 }
 
 void colision_check(struct enemy enemies[], int i, float* shield, float* player_radius, float player_shield_radius,
-                    struct shot_properties* shot, int* player_points, bool armor, float shrinking_armor, bool armor_started, bool* ally_hitted_missile){
+                    struct shot_properties* shot, int* player_points, bool armor, float shrinking_armor,
+                    bool armor_started, bool* ally_hitted_missile){
 
   float enemy_angle = M_PI / 2 + atan((enemies[i].pos_y - half_height) / (enemies[i].pos_x - half_width));
   enemy_angle += enemies[i].pos_x >= half_width ? M_PI : 0;
@@ -671,10 +741,10 @@ void colision_check(struct enemy enemies[], int i, float* shield, float* player_
       }else{
 
         shot->alive = false;
+        enemies[i].alive = false;
 
         if(!enemies[i].ally){
 
-          enemies[i].alive = false;
           *player_radius += *player_radius * 0.02;
           *player_points += 2;
 
@@ -691,8 +761,8 @@ void colision_check(struct enemy enemies[], int i, float* shield, float* player_
 void enemy_logic(ALLEGRO_TIMER* timer, struct enemy enemies[], int* index_enemies,
                  int* max_enemies, float* mouse_pos_x, float* mouse_pos_y, float* shield,
                  float* player_radius, float player_shield_radius, struct shot_properties* shot,
-                 int* player_points, bool armor, float shrinking_armor, bool armor_started, int level, int difficulty, bool* ally_hitted_missile,
-                 float* delay_5s){
+                 int* player_points, bool armor, float shrinking_armor, bool armor_started, int level,
+                int difficulty, bool* ally_hitted_missile, float* delay_5s){
 
   int spawn_rate =  level >= 49 ? 2 : (50 - level);
   if(rand() % spawn_rate == 0) enemy_generation(enemies, index_enemies, max_enemies, level, difficulty);
@@ -726,7 +796,8 @@ void enemy_logic(ALLEGRO_TIMER* timer, struct enemy enemies[], int* index_enemie
 void game_background(ALLEGRO_FONT* font, ALLEGRO_TIMER* timer, float player_radius, float player_shield_radius, float* shield,
                      float* mouse_pos_x, float* mouse_pos_y, float gun_size, int* player_life, int* player_points, bool armor,
                      bool armor_available, float delay_armor, float random_seconds_5_10, bool* armor_started, float* shrinking_armor,
-                     int level, int levels_change[], bool level_updated, int* duration_level_up, bool missile, bool shot_fired){
+                     int level, int levels_change[], bool level_updated, int* duration_level_up, bool missile, bool shot_fired,
+                     bool pause_available){
 
   *shield = M_PI / 2 + atan(*mouse_pos_y / *mouse_pos_x);
   *shield += *mouse_pos_x >= 0 ? M_PI : 0;
@@ -745,7 +816,7 @@ void game_background(ALLEGRO_FONT* font, ALLEGRO_TIMER* timer, float player_radi
   int criteria = 50 + level * 10;
   levels_change[level] = criteria + levels_change[level - 1] + 10 * (level - 1);
 
-  ALLEGRO_COLOR gun_color = missile && !shot_fired ? al_map_rgb(0, 255, 255) : al_map_rgb(0, 123, 123);
+  ALLEGRO_COLOR gun_color = missile && !shot_fired ? al_map_rgb(0, 34, 102) : al_map_rgb(0, 123, 123);
 
   must_init(al_init_image_addon(), "image addon");
   ALLEGRO_BITMAP* background = al_load_bitmap("background.png");
@@ -776,7 +847,12 @@ void game_background(ALLEGRO_FONT* font, ALLEGRO_TIMER* timer, float player_radi
 
   al_draw_textf(font, al_map_rgb(255, 255, 255), width * 0.99, 0, ALLEGRO_ALIGN_RIGHT, "(Próximo %d pts) Nível: %d", levels_change[level], level);
 
-  al_draw_textf(font, al_map_rgb(255, 255, 255), width * 0.70, 0, ALLEGRO_ALIGN_RIGHT, "Pause: %f", player_radius);
+  if(pause_available){
+
+    al_draw_filled_rectangle(width * 0.75, height * 0.01, width * 0.754, height * 0.04, al_map_rgb(255, 255, 255));
+    al_draw_filled_rectangle(width * 0.76, height * 0.01, width * 0.764, height * 0.04, al_map_rgb(255, 255, 255));
+
+  }
 
   if(armor_available){
 
@@ -823,10 +899,11 @@ void play_game(ALLEGRO_EVENT event, ALLEGRO_EVENT_QUEUE* queue, ALLEGRO_KEYBOARD
                float* player_radius, float player_shield_radius, float* shield, float* mouse_pos_x, 
                float* mouse_pos_y, struct enemy enemies[], int* index_enemies, int* max_enemies,
                float gun_size, float* delay_1s, struct shot_properties* shot, int* player_life,
-               int* player_points, int* level, int levels_change[], bool* level_updated, int* duration_level_up, int difficulty,
-               float* delay_armor, float* random_seconds_5_10, bool* armor_first_use, bool* armor_started, float* shrinking_armor,
-               bool* increasing_life, bool* missile,
-               int* missile_update, bool* ally_hitted_missile, float* delay_5s, bool* pause_available, bool* pause){
+               int* player_points, int* level, int levels_change[], bool* level_updated,
+               int* duration_level_up, int difficulty, float* delay_armor, float* random_seconds_5_10,
+               bool* armor_first_use, bool* armor_started, float* shrinking_armor,
+               bool* increasing_life, bool* missile, int* missile_update, bool* ally_hitted_missile,
+               float* delay_5s, bool* pause_available, bool* pause, float* final_timer){
 
   bool shot_fired = false;
   bool armor = false;
@@ -880,9 +957,6 @@ void play_game(ALLEGRO_EVENT event, ALLEGRO_EVENT_QUEUE* queue, ALLEGRO_KEYBOARD
                          (*delay_armor + *random_seconds_5_10 > ALLEGRO_MSECS_TO_SECS(al_get_timer_count(timer) * 10)
                            && *delay_armor != 0 && *armor_first_use);
 
-  if(al_key_down(&keyboard, ALLEGRO_KEY_Z))
-    *player_points += 1;
-
   if(*redraw && al_is_event_queue_empty(queue) && *screen == 2){
 
     al_clear_to_color(al_map_rgb(0, 0, 100));
@@ -890,7 +964,7 @@ void play_game(ALLEGRO_EVENT event, ALLEGRO_EVENT_QUEUE* queue, ALLEGRO_KEYBOARD
                     mouse_pos_x, mouse_pos_y, gun_size, player_life, player_points,
                     armor, armor_available, *delay_armor, *random_seconds_5_10, armor_started, shrinking_armor,
                     *level, levels_change, *level_updated, duration_level_up, *missile,
-                    shot_fired);
+                    shot_fired, *pause_available);
     enemy_logic(timer, enemies, index_enemies, max_enemies,
                 mouse_pos_x, mouse_pos_y, shield, player_radius,
                 player_shield_radius, shot, player_points, armor,
@@ -949,6 +1023,14 @@ void play_game(ALLEGRO_EVENT event, ALLEGRO_EVENT_QUEUE* queue, ALLEGRO_KEYBOARD
 
   }
 
+  if(*player_radius <= 0 && *player_life == 0){
+
+    *screen = 5;
+    *final_timer = ALLEGRO_MSECS_TO_SECS(al_get_timer_count(timer) * 10);
+
+  }
+  if(*player_radius >= player_shield_radius) *screen = 4;
+
 }
 
 int main(){
@@ -972,6 +1054,9 @@ int main(){
 
   ALLEGRO_FONT* help_font = al_load_font("help_font.ttf", font_size / 3, 0);
   must_init(help_font, "help_font");
+
+  ALLEGRO_FONT* game_over_font = al_load_font("gameover_font.ttf", font_size * 2, 0);
+  must_init(game_over_font, "game over font");
 
   ALLEGRO_EVENT event;
   ALLEGRO_KEYBOARD_STATE keyboard;
@@ -1029,6 +1114,8 @@ int main(){
   bool pause_available = true;
   bool pause = false;
 
+  float final_timer;
+
   time_t t;
   srand(time(&t));
 
@@ -1057,8 +1144,9 @@ int main(){
                   &screen, &player_radius, player_shield_radius, &shield, &mouse_pos_x,
                   &mouse_pos_y, enemies, &index_enemies, &max_enemies, gun_size, &delay_1s,
                   &shot, &player_life, &player_points, &level, levels_change, &level_updated,
-                  &duration_level_up, difficulty, &delay_armor, &random_seconds_5_10, &armor_first_use, &armor_started, &shrinking_armor,
-                  &increasing_life, &missile, &missile_update, &ally_hitted_missile, &delay_5s, &pause_available, &pause);
+                  &duration_level_up, difficulty, &delay_armor, &random_seconds_5_10, &armor_first_use,
+                  &armor_started, &shrinking_armor, &increasing_life, &missile, &missile_update,
+                  &ally_hitted_missile, &delay_5s, &pause_available, &pause, &final_timer);
         break;
 
       case 3:
@@ -1069,13 +1157,59 @@ int main(){
 
       case 4:
 
-        victory(font);
+        victory(font, &game);
         break;
 
       case 5:
         
-        game_over();
-        break;  
+        game_over(event, queue, keyboard, game_font, timer, &game, &redraw,
+                  &screen, button_colors, game_over_font, player_points, &final_timer);
+
+        if(screen == 2){
+
+          player_shield_radius = width / height * 60;
+          shield = 0;
+          mouse_pos_x = 0;
+          mouse_pos_y = - half_height;
+
+          player_radius = width / height * 20;
+          player_life = 3;
+          player_points = 0;
+
+          gun_size = player_radius * 0.8; 
+          delay_1s = 0;
+          missile = false;
+          missile_update = 1;
+          ally_hitted_missile = false;
+          delay_5s = 0;
+
+          max_enemies = 10;
+          index_enemies = 0;
+
+          for(int i = 0; i < max_enemies; i++)
+            enemies[i].alive = false;
+
+          level = 1;
+          levels_change[0] = 0;
+          level_updated = false;
+          increasing_life = false;
+          duration_level_up = 0;
+
+          delay_armor = 0;
+          random_seconds_5_10;
+          armor_started = false;
+          shrinking_armor = 0;
+          armor_first_use = false;
+
+          pause_available = true;
+          pause = false;
+
+          final_timer = 0;
+
+          al_set_timer_count(timer, 0);
+        }
+
+        break;
     }
 
   }
